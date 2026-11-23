@@ -6,6 +6,6 @@ A public repo and a portfolio piece, so keep it exemplary. Follow the workspace 
 
 - Copy and positioning come from `../hq/docs/strategy/positioning.md` and `../hq/content/`. Don't invent claims or prices; they come from `../hq/docs/strategy/offers-and-pricing.md`.
 - Never mention the current client or its industry.
-- Before committing: `npm test && npm run build`; for infra changes, `cd infra && npm test && npx cdk diff`.
-- No cookies and no third-party scripts unless an ADR says so. The CSP lives in `infra/lib/site-stack.ts`.
+- Before committing: `npm test && npm run build && npm run check:dist`. Infra changes: none here (frozen, see the banner).
+- No cookies and no third-party scripts unless an ADR says so. The CSP currently lives in `infra/lib/site-stack.ts` (frozen). It moves with the infra scripts in #53 phase 3.
 - Links to accounts that don't exist yet are marked `TODO` in `src/consts.ts`.
