@@ -46,6 +46,7 @@ Pushes to `main` deploy the site via the repo variables `AWS_DEPLOY_ROLE_ARN`, `
 **0. Pre-flight**
 - `dig +short NS iorgadragos.ro` must return **only** the studio zone's name servers (listed in `aws.md`).
 - The registrar must have no DS (DNSSEC) record for the domain.
+- `npm run build && npm run check:launch` passes, so every placeholder in `src/consts.ts` is filled (LinkedIn, Sessionize, Reg. Com.).
 
 **A. Certificate (days before, no downtime)**
 - In a PR, set `"issueCert": true` in `infra/cdk.json`. Merge, then run `AWS_PROFILE=iorgadragos npx cdk deploy`.
@@ -58,6 +59,7 @@ Pushes to `main` deploy the site via the repo variables `AWS_DEPLOY_ROLE_ARN`, `
 4. Verify:
    - https://iorgadragos.ro returns 200 with the security headers and the new certificate.
    - https://www.iorgadragos.ro/?a=1 returns 301 to `https://iorgadragos.ro/?a=1`.
+   - https://www.iorgadragos.ro/?q=a%20b&x=1%262 returns 301 with the query string byte-identical.
    - Mail still works.
 
 **Rollback (any point in B):**

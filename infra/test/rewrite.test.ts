@@ -14,11 +14,19 @@ describe('viewer-request rewrite', () => {
     ['/about', '/about/index.html'],
     ['/about/', '/about/index.html'],
     ['/blog/node.js-tips', '/blog/node.js-tips/index.html'],
+    ['/blog/release-2.0', '/blog/release-2.0/index.html'],
+    ['/_astro/page.Ab12Cd.css', '/_astro/page.Ab12Cd.css'],
+    ['/sitemap-index.xml', '/sitemap-index.xml'],
+    ['/og.png', '/og.png'],
     ['/favicon.svg', '/favicon.svg'],
     ['/rss.xml', '/rss.xml'],
     ['/404.html', '/404.html'],
   ])('%s → %s', (uri, expected) => {
     expect(handler(ev(uri)).uri).toBe(expected);
+  });
+
+  it('treats a path ending in a real file extension as a file (so slugs must not end in one; see src/lib/slugs.test.ts)', () => {
+    expect(handler(ev('/blog/what-is-next.js')).uri).toBe('/blog/what-is-next.js');
   });
 
   it('redirects www to the apex and keeps path + query string', () => {
@@ -29,6 +37,11 @@ describe('viewer-request rewrite', () => {
     }));
     expect(res.statusCode).toBe(301);
     expect(res.headers.location.value).toBe('https://example.com/blog/x?utm_source=linkedin&tag=a&tag=b&flag');
+  });
+
+  it('passes already-encoded query values through unchanged (CloudFront delivers them encoded)', () => {
+    const res = handler(ev('/', 'www.example.com', { q: { value: 'a%20b' }, x: { value: '1%262' } }));
+    expect(res.headers.location.value).toBe('https://example.com/?q=a%20b&x=1%262');
   });
 
   it('redirects www without a query string cleanly', () => {

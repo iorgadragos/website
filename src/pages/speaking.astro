@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { LINKS, SITE } from '../consts';
+import { LINKS, SITE, isSet } from '../consts';
 ---
 <Base title="Speaking" description="Talks and workshops on AI-augmented software delivery and AI adoption in engineering teams.">
   <div class="container">
@@ -13,7 +13,7 @@ import { LINKS, SITE } from '../consts';
       <p class="muted">A pragmatic adoption framework: what to standardize, automate and forbid, and how to measure the impact. Also available as an in-house workshop.</p>
       <div class="actions">
         <a class="btn btn-primary" href={`mailto:${SITE.email}?subject=Speaking%20invitation`}>Invite me to speak</a>
-        <a class="btn btn-ghost" href={LINKS.sessionize}>Sessionize profile</a>
+        {isSet(LINKS.sessionize) && <a class="btn btn-ghost" href={LINKS.sessionize}>Sessionize profile</a>}
       </div>
     </section>
   </div>

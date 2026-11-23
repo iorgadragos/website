@@ -9,6 +9,7 @@ export const SITE = {
 };
 
 // Fill in once accounts exist (tracked on the Studio Ops / Marketing boards).
+// Values containing TODO are hidden from the site (see `isSet`) and fail `npm run check:launch`.
 export const LINKS = {
   calDiscovery: 'https://cal.com/iorgadragos/discovery',
   calMentoring: 'https://cal.com/iorgadragos/mentoring',
@@ -35,3 +36,6 @@ export const NAV = [
   { href: '/speaking/', label: 'Speaking' },
   { href: '/about/', label: 'About' },
 ];
+
+/** False for placeholders, so unfinished links/fields are never rendered. */
+export const isSet = (value: string) => !value.includes('TODO');

@@ -1,5 +1,8 @@
 // CloudFront Function (viewer request, runtime cloudfront-js-2.0).
 // The DOMAIN placeholder (two underscores each side) is replaced at synth time (see site-stack.ts). Unit-tested in test/rewrite.test.ts.
+// Extensions the build actually emits. Anything else is treated as a page, so slugs may contain dots.
+var FILE_EXT = /\.(html|xml|txt|json|webmanifest|ico|svg|png|jpe?g|gif|webp|avif|css|js|mjs|map|woff2?|pdf)$/i;
+
 function handler(event) {
   var req = event.request;
   var host = req.headers.host && req.headers.host.value;
@@ -14,8 +17,8 @@ function handler(event) {
   var last = uri.split('/').pop();
   if (uri.endsWith('/')) {
     req.uri = uri + 'index.html';
-  } else if (!/\.[a-z0-9]{1,5}$/i.test(last)) {
-    // Pretty URL (/about, /blog/node.js-tips) → its index.html; real files (/favicon.svg, /rss.xml) pass through.
+  } else if (!FILE_EXT.test(last)) {
+    // Pretty URL (/about, /blog/node.js-tips, /blog/release-2.0) → its index.html; real files pass through.
     req.uri = uri + '/index.html';
   }
   return req;

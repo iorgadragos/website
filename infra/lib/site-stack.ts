@@ -40,6 +40,7 @@ export class SiteStack extends Stack {
     Tags.of(this).add('project', project);
     Tags.of(this).add('repo', `${config.github.org}/${config.github.repo}`);
     Tags.of(this).add('managed-by', 'cdk');
+    Tags.of(this).add('component', 'site');
 
     // --- DNS (shared zone, imported) -------------------------------------------
     const zone = route53.HostedZone.fromHostedZoneAttributes(this, 'Zone', {
