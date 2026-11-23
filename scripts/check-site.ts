@@ -22,10 +22,11 @@ if (!m) throw new Error('FILE_EXT not found in infra/lib/edge/rewrite.js');
 const FILE_EXT = new RegExp(m[1], m[2]);
 
 const errors: string[] = [];
-// Only well-known OS junk is skipped. Any other dotfile (.env, .git/…) would be uploaded by `s3 sync`, so it fails.
+// Only these exact OS junk files are skipped; deploy.yml also excludes them from upload. Any other dotfile
+// (.env, .git/…, ._*) would be uploaded by `s3 sync`, so it fails.
 const OS_JUNK = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini']);
 const walk = (dir: string): string[] =>
-  readdirSync(dir).filter((n) => !OS_JUNK.has(n) && !n.startsWith('._')).flatMap((name) => {
+  readdirSync(dir).filter((n) => !(OS_JUNK.has(n) && lstatSync(join(dir, n)).isFile())).flatMap((name) => {
     const p = join(dir, name);
     const st = lstatSync(p);
     if (name.startsWith('.') && !(name === '.well-known' && relative(dist, dir) === '')) {

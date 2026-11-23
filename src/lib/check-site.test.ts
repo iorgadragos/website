@@ -30,12 +30,12 @@ const fixture = (files: Record<string, string>) => {
 describe('check-site dist gate', () => {
   it('passes a clean build, ignores OS junk and allows /.well-known', () => {
     expect(run(fixture({
-      'index.html': 'ok', 'blog/post/index.html': 'ok', 'favicon.svg': '', '.DS_Store': '', '._index.html': '',
+      'index.html': 'ok', 'blog/post/index.html': 'ok', 'favicon.svg': '', '.DS_Store': '',
       '.well-known/security.txt': 'Contact: x',
     })).code).toBe(0);
   });
   it('fails on any other dotfile (it would be published)', () => {
-    for (const f of ['.env', '.git/config', 'blog/.secrets.json', '.backup.html']) {
+    for (const f of ['.env', '.git/config', 'blog/.secrets.json', '.backup.html', '._promo.html', '._hidden/secrets.json']) {
       const r = run(fixture({ 'index.html': 'ok', [f]: 'SECRET=1' }));
       expect(r.code, f).toBe(1);
       expect(r.err, f).toContain('dotfile in build output');
