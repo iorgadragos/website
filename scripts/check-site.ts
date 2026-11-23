@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { LEGAL, LINKS, isSet } from '../src/consts.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-// CHECK_SITE_DIST overrides the build dir (used by the script's own tests).
-const dist = process.env.CHECK_SITE_DIST ?? join(root, 'dist');
+// CHECK_SITE_DIST overrides the build dir for the script's own tests only; ignored in CI so the gate always checks dist/.
+const dist = (!process.env.CI && process.env.CHECK_SITE_DIST) || join(root, 'dist');
 const mode = process.argv[2];
 if (mode !== 'dist' && mode !== 'launch') {
   console.error('usage: node scripts/check-site.ts <dist|launch>');
@@ -22,12 +22,16 @@ if (!m) throw new Error('FILE_EXT not found in infra/lib/edge/rewrite.js');
 const FILE_EXT = new RegExp(m[1], m[2]);
 
 const errors: string[] = [];
-// Local OS junk is never deployed meaningfully; skip it (dotfiles other than .well-known).
-const ignored = (name: string) => name.startsWith('.') && name !== '.well-known';
+// Only well-known OS junk is skipped. Any other dotfile (.env, .git/…) would be uploaded by `s3 sync`, so it fails.
+const OS_JUNK = new Set(['.DS_Store', 'Thumbs.db', 'desktop.ini']);
 const walk = (dir: string): string[] =>
-  readdirSync(dir).filter((n) => !ignored(n)).flatMap((name) => {
+  readdirSync(dir).filter((n) => !OS_JUNK.has(n) && !n.startsWith('._')).flatMap((name) => {
     const p = join(dir, name);
     const st = lstatSync(p);
+    if (name.startsWith('.') && !(name === '.well-known' && relative(dist, dir) === '')) {
+      errors.push(`dotfile in build output (would be published): /${relative(dist, p)}`);
+      return [];
+    }
     if (st.isSymbolicLink()) {
       errors.push(`symlink in build output (not allowed): /${relative(dist, p)}`);
       return [];
@@ -63,4 +67,4 @@ if (errors.length) {
   for (const e of errors) console.error(`✗ ${e}`);
   process.exit(1);
 }
-console.log(`✓ ${mode} checks passed`);
+console.log(`✓ ${mode} checks passed (${relative(root, dist) || '.'})`);
