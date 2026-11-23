@@ -1,6 +1,6 @@
 # iorgadragos.ro
 
-> **⚠ FROZEN (ADR 0011, iorgadragos/studio#53).** We don't use CDK: all infrastructure is managed with AWS CLI scripts plus `infra/RUNBOOK.md` in `iorgadragos/studio`. Until the CloudFormation stacks are retired, **don't run any `cdk` command** and don't change stack-owned resources with the CLI. Site **content** deploys (GitHub workflow: S3 sync + invalidation) continue as normal. The CDK code here is kept only until the retirement, then removed.
+> **⚠ FROZEN (ADR 0011).** We don't use CDK: all infrastructure is managed with AWS CLI scripts plus `infra/RUNBOOK.md` in `iorgadragos/studio`. Until the CloudFormation stacks are retired, **don't run any `cdk` command** and don't change stack-owned resources with the CLI. Site **content** deploys (GitHub workflow: S3 sync + invalidation) continue as normal. The CDK code here is kept only until the retirement, then removed.
 
 The website of **Dragos Iorga**, a senior tech lead delivering software end to end as an AI-augmented, one-person product team.
 It is built in public with the same standards I use for client work.
@@ -20,7 +20,7 @@ npm run build      # astro check + static build → dist/
 ```
 Blog posts live in `src/content/blog/*.md(x)`. Set `draft: false` to publish; future-dated posts stay hidden.
 
-## Infrastructure
+## Infrastructure _(historical, frozen: the launch cutover will use the studio's infra scripts, not the CDK steps below)_
 The site runs in its own AWS account (**iorgadragos-studio**), in an organization managed from the private repo `iorgadragos/aws-foundation`. That repo owns everything shared: the account, its guardrails, the GitHub OIDC provider and the `iorgadragos.ro` hosted zone with its mail and apex/www records. This stack only references them. Its single write into the zone is ACM's validation CNAMEs for its own certificate.
 
 - Owned resources are tagged `project=iorgadragos-website`, and named with that prefix where a name is set (the bucket keeps its generated name). The stack has termination protection; the bucket is versioned and retained on delete. The account ID is pinned, so deploying under the wrong profile fails.
