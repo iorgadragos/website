@@ -36,7 +36,7 @@ Pushes to `main` deploy the site via the repo variables `AWS_DEPLOY_ROLE_ARN`, `
 1. Upload hashed `_astro/*` assets with a 1-year immutable cache.
 2. Upload everything else with a 5-minute cache.
 3. Invalidate CloudFront.
-4. Prune files that were removed from the build.
+4. Prune files that were removed from the build. Old hashed assets are kept, so cached pages keep working.
 
 **Rollback:** revert the commit on `main`, which redeploys. Previous object versions also stay in the bucket for 30 days.
 
@@ -61,7 +61,7 @@ Pushes to `main` deploy the site via the repo variables `AWS_DEPLOY_ROLE_ARN`, `
    - Mail still works.
 
 **Rollback (any point in B):**
-1. Revert `useCustomDomain` and deploy, which frees the aliases.
+1. Run `AWS_PROFILE=iorgadragos npx cdk deploy -c useCustomDomain=false`, which frees the aliases immediately. Revert the PR afterwards.
 2. Re-add the aliases and the legacy certificate to the legacy distribution.
 3. Revert `dns.siteTarget` and deploy `Dns`.
 

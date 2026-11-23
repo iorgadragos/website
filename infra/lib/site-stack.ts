@@ -53,7 +53,7 @@ export class SiteStack extends Stack {
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
       versioned: true,
-      lifecycleRules: [{ noncurrentVersionExpiration: Duration.days(30) }],
+      lifecycleRules: [{ noncurrentVersionExpiration: Duration.days(30), abortIncompleteMultipartUploadAfter: Duration.days(1) }],
       removalPolicy: RemovalPolicy.RETAIN,
     });
 
