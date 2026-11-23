@@ -1,0 +1,43 @@
+---
+import Base from '../layouts/Base.astro';
+import Cta from '../components/Cta.astro';
+const services = [
+  { title: 'Discovery Sprint', price: 'EUR 1,500 – 3,000 · fixed', who: 'Founders and teams about to build or rebuild something.',
+    points: ['Stakeholder interviews and review of existing systems', 'Scope, out-of-scope, risks and architecture sketch', 'Milestone plan with a fixed estimate', 'Written plan plus a readout call; fee credited if we build together'] },
+  { title: 'End-to-end build', price: 'Fixed price per milestone, or EUR 600 – 800 / day', who: 'Products that need to ship without assembling a team.',
+    points: ['Web, mobile, APIs and GraphQL', 'AWS infrastructure as code, CI/CD, observability', 'Automated tests and security reviews as part of "done"', 'Release, handover and support with an agreed SLA'] },
+  { title: 'Fractional tech lead', price: 'From EUR 1,500 / month', who: 'Companies needing senior technical judgment part-time.',
+    points: ['Architecture and technology decisions', 'Code and design reviews', 'Hiring and vendor evaluation', 'Roadmap and delivery process'] },
+  { title: 'AI Readiness Audit', price: 'EUR 2,500 – 5,000', who: 'Engineering teams adopting AI coding tools.',
+    points: ['Interviews and SDLC review (repos, CI, review, testing)', 'Security, IP and data-handling policy', 'Adoption roadmap with metrics', 'Hands-on team workshop'] },
+];
+---
+<Base title="Services" description="Discovery Sprints, end-to-end builds, fractional tech leadership and AI Readiness Audits.">
+  <div class="container">
+    <section>
+      <p class="eyebrow">Services</p>
+      <h1>Pick the shape that fits</h1>
+      <p class="lead">All prices exclude VAT. EU business clients are invoiced under reverse charge.</p>
+    </section>
+    <div class="grid">
+      {services.map((s) => (
+        <div class="card">
+          <h3>{s.title}</h3>
+          <p class="muted">{s.who}</p>
+          <ul>{s.points.map((p) => <li>{p}</li>)}</ul>
+          <p class="price">{s.price}</p>
+        </div>
+      ))}
+    </div>
+    <section class="prose">
+      <h2>1:1 calls</h2>
+      <ul>
+        <li><strong>Discovery call</strong>, 30 min, free, for companies with a project in mind.</li>
+        <li><strong>Tech / AI advisory</strong>, 60 min, EUR 200, for founders, CTOs and leads. Credited if we sign a project within 30 days.</li>
+        <li><strong>Career &amp; AI-adaptation mentoring</strong>, 60 min, EUR 90, for developers navigating the AI era.</li>
+      </ul>
+      <a class="btn btn-primary" href="/book/">Book a call</a>
+    </section>
+    <Cta />
+  </div>
+</Base>

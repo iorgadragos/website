@@ -1,0 +1,42 @@
+---
+import Base from '../layouts/Base.astro';
+import Cta from '../components/Cta.astro';
+import { LINKS } from '../consts';
+const stages = [
+  ['Discovery', 'I interview stakeholders and turn the notes into scope, risks and a plan. AI structures the material; I decide what matters.'],
+  ['Architecture', 'A simple, secure design. Decisions are recorded as ADRs and there is a threat model. AI is a sparring partner, not the decider.'],
+  ['Development', 'Agents work on parallel tasks; I review every change. Tests are part of done.'],
+  ['Infrastructure', 'Everything in code (AWS CDK). Changes go through review and are deployed only by CI, with short-lived credentials.'],
+  ['Release', 'Checklists, release notes and a rollback plan. Deploys are repeatable and boring.'],
+  ['Support', 'Runbooks, alarms, incident notes and a clean handover whenever you want it.'],
+];
+---
+<Base title="How I work" description="The AI-augmented process and quality gates behind one-person, end-to-end delivery.">
+  <div class="container">
+    <section class="prose">
+      <p class="eyebrow">How I work</p>
+      <h1>AI does the volume. A senior makes the decisions.</h1>
+      <p class="lead">The bottleneck in software has moved from typing code to judgment. My process is built around that.</p>
+    </section>
+    <div class="grid">{stages.map(([t, d]) => <div class="card"><h3>{t}</h3><p class="muted">{d}</p></div>)}</div>
+    <section class="prose">
+      <h2>Quality gates on every change</h2>
+      <ol>
+        <li>Lint, type-check and automated tests in CI</li>
+        <li>Dependency and secret scanning</li>
+        <li>Human review of every merge (mine)</li>
+        <li>Infrastructure diffs reviewed before deploy</li>
+        <li>Decisions and docs updated with the code</li>
+      </ol>
+      <h2>What you get as a client</h2>
+      <ul>
+        <li>One point of contact, me, for everything</li>
+        <li>A written status report every two weeks, at minimum</li>
+        <li>All code, infrastructure and docs in your accounts and repositories</li>
+        <li>A shared board, so you can see exactly what's happening</li>
+      </ul>
+      <p>This website is built the same way. <a href={LINKS.repo}>Read its source</a>.</p>
+    </section>
+    <Cta />
+  </div>
+</Base>

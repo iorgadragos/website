@@ -1,0 +1,27 @@
+---
+import Base from '../layouts/Base.astro';
+import { LINKS } from '../consts';
+const calls = [
+  { t: 'Discovery call', d: '30 min · free', who: 'For companies with a project in mind. A short intake form helps me prepare.', href: LINKS.calDiscovery, primary: true },
+  { t: 'Tech / AI advisory', d: '60 min · EUR 200', who: 'Architecture, AI adoption, a second opinion. Credited if we sign a project within 30 days.', href: LINKS.calAdvisory },
+  { t: 'Mentoring', d: '60 min · EUR 90', who: 'Career and AI-adaptation advice for developers.', href: LINKS.calMentoring },
+];
+---
+<Base title="Book a call" description="Book a free discovery call, a paid advisory session or a mentoring call.">
+  <div class="container">
+    <section>
+      <p class="eyebrow">Book a call</p>
+      <h1>Let's talk</h1>
+      <p class="lead">Pick the call that fits. Times are shown in your time zone. Paid calls are charged securely via Stripe when you book.</p>
+    </section>
+    <div class="grid">
+      {calls.map((c) => (
+        <div class="card">
+          <h3>{c.t}</h3><p class="price" style="margin-top:0">{c.d}</p><p class="muted">{c.who}</p>
+          <a class={`btn ${c.primary ? 'btn-primary' : 'btn-ghost'}`} href={c.href}>Choose a time</a>
+        </div>
+      ))}
+    </div>
+    <p class="muted" style="margin-top:2rem">Cancel or reschedule paid calls up to 24 hours before for a full refund. See <a href="/legal/">terms</a>.</p>
+  </div>
+</Base>

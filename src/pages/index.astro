@@ -1,0 +1,53 @@
+---
+import Base from '../layouts/Base.astro';
+import Cta from '../components/Cta.astro';
+const stages = ['Discovery', 'Architecture', 'Development', 'Infrastructure', 'Release', 'Support'];
+---
+<Base>
+  <div class="container">
+    <section>
+      <p class="eyebrow">Senior tech lead · AI-augmented · end to end</p>
+      <h1>Your whole product team,<br />in one senior engineer.</h1>
+      <p class="lead">
+        I take your product from discovery to production and support: architecture, web and mobile, APIs, AWS,
+        CI/CD and testing. I work AI-augmented, so you get team-level output with one accountable person and no handoffs.
+      </p>
+      <div class="actions">
+        <a class="btn btn-primary" href="/book/">Book a free 30-min discovery call</a>
+        <a class="btn btn-ghost" href="/how-i-work/">See how I work →</a>
+      </div>
+      <ul class="trust" style="margin-top:2rem">
+        <li>15 years shipping software</li>
+        <li>Full-stack, cloud &amp; QA</li>
+        <li>Security, tests &amp; docs included</li>
+        <li>EU-based, US-friendly hours</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>One person. The whole lifecycle.</h2>
+      <ol class="lifecycle">{stages.map((s) => <li>{s}</li>)}</ol>
+      <p class="muted prose">No handoffs, no account managers, no juniors learning on your budget. One senior engineer who understands the
+        whole system and is accountable for it, with AI doing the volume and a human making the decisions.</p>
+    </section>
+
+    <section>
+      <h2>How I can help</h2>
+      <div class="grid">
+        <div class="card"><h3>Discovery Sprint</h3><p class="muted">A costed, de-risked plan in 1–2 weeks, before you commit to a build.</p><p class="price">From EUR 1,500</p></div>
+        <div class="card"><h3>End-to-end build</h3><p class="muted">MVPs, features, migrations and automation, shipped to production and supported.</p><p class="price">Fixed price per milestone</p></div>
+        <div class="card"><h3>Fractional tech lead</h3><p class="muted">Senior technical leadership and architecture without a full-time hire.</p><p class="price">From EUR 1,500 / month</p></div>
+        <div class="card"><h3>AI Readiness Audit</h3><p class="muted">I'll teach your team to work the way I do: safely, measurably and with guardrails.</p><p class="price">From EUR 2,500</p></div>
+      </div>
+    </section>
+
+    <section class="prose">
+      <h2>Production-grade by default</h2>
+      <p>Every engagement includes infrastructure-as-code, CI/CD, automated tests, security best practices, written decisions and
+        documentation, all in <em>your</em> repositories. You're never locked in to me.</p>
+      <p class="muted">I take on one build client at a time, so you get real focus.</p>
+    </section>
+
+    <Cta />
+  </div>
+</Base>

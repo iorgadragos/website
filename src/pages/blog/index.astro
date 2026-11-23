@@ -1,0 +1,21 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { publishedPosts, formatDate } from '../../lib/posts';
+import { LINKS } from '../../consts';
+const posts = publishedPosts(await getCollection('blog'));
+---
+<Base title="Writing" description="Articles on AI-era engineering, end-to-end delivery, architecture and careers.">
+  <div class="container"><section class="prose">
+    <p class="eyebrow">Writing</p>
+    <h1>Notes from an AI-augmented engineer</h1>
+    <p class="lead">A new article every two weeks: real workflows, no hype. <a href={LINKS.substack}>Subscribe to the newsletter</a>.</p>
+    {posts.length === 0 ? <p class="muted">The first article lands on 1 February 2027.</p> : (
+      <ul class="post-list">
+        {posts.map((p) => (
+          <li><a href={`/blog/${p.id}/`}>{p.data.title}</a><div class="muted">{formatDate(p.data.pubDate)} · {p.data.description}</div></li>
+        ))}
+      </ul>
+    )}
+  </section></div>
+</Base>

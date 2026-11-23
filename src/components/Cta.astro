@@ -1,0 +1,17 @@
+---
+interface Props { title?: string; text?: string }
+const {
+  title = 'Planning something for this year?',
+  text = 'Book a free 30-minute discovery call. You get an honest view on scope, risks and whether I am the right fit.',
+} = Astro.props;
+---
+<section>
+  <div class="card">
+    <h2 style="margin-top:0">{title}</h2>
+    <p class="muted">{text}</p>
+    <div class="actions">
+      <a class="btn btn-primary" href="/book/">Book a discovery call</a>
+      <a class="btn btn-ghost" href="/services/">See services</a>
+    </div>
+  </div>
+</section>

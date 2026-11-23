@@ -1,0 +1,20 @@
+---
+import Base from '../layouts/Base.astro';
+import { LINKS, SITE } from '../consts';
+---
+<Base title="Speaking" description="Talks and workshops on AI-augmented software delivery and AI adoption in engineering teams.">
+  <div class="container">
+    <section class="prose">
+      <p class="eyebrow">Speaking</p>
+      <h1>Talks &amp; workshops</h1>
+      <h2>The one-person product team: shipping production software alone with AI agents</h2>
+      <p class="muted">How one senior engineer can deliver end to end with AI, the guardrails that keep it production-grade, and where AI still fails.</p>
+      <h2>Guardrails over hype: making AI-assisted engineering safe for real teams</h2>
+      <p class="muted">A pragmatic adoption framework: what to standardize, automate and forbid, and how to measure the impact. Also available as an in-house workshop.</p>
+      <div class="actions">
+        <a class="btn btn-primary" href={`mailto:${SITE.email}?subject=Speaking%20invitation`}>Invite me to speak</a>
+        <a class="btn btn-ghost" href={LINKS.sessionize}>Sessionize profile</a>
+      </div>
+    </section>
+  </div>
+</Base>

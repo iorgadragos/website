@@ -1,0 +1,19 @@
+---
+import Base from '../../layouts/Base.astro';
+import { LEGAL, SITE } from '../../consts';
+---
+<Base title="Legal & privacy" description="Imprint, privacy notice and booking terms.">
+  <div class="container"><section class="prose">
+    <h1>Legal &amp; privacy</h1>
+    <h2>Imprint</h2>
+    <p>{LEGAL.entity}<br />CUI: {LEGAL.cui} · Reg. Com.: {LEGAL.regCom}<br />{LEGAL.address}<br />Email: <a href={`mailto:${SITE.email}`}>{SITE.email}</a></p>
+    <h2>Privacy</h2>
+    <p class="muted">Draft. This will be replaced by the reviewed privacy policy before launch.</p>
+    <p>This site uses no cookies and no tracking. When you book a call, the scheduling provider (Cal.com) and the payment provider
+      (Stripe) process your name, email and payment details on my behalf, only to deliver the call and issue an invoice. I keep
+      business correspondence and invoices for as long as Romanian law requires. To access or delete your data, email me.</p>
+    <h2>Booking terms</h2>
+    <p>Paid calls can be cancelled or rescheduled up to 24 hours before the start for a full refund. Calls are professional
+      advice on software engineering, not legal, financial or tax advice.</p>
+  </section></div>
+</Base>
