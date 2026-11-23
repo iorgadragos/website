@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config';
 
-// Site unit tests only; infra/ has its own vitest setup and dependencies.
+// Site unit tests + edge/ (CloudFront Function and security-header data).
 export default defineConfig({
-  test: { include: ['src/**/*.test.ts'] },
+  test: { include: ['src/**/*.test.ts', 'edge/**/*.test.ts'] },
 });

@@ -1,7 +1,5 @@
 # iorgadragos.ro
 
-> **⚠ FROZEN (ADR 0011).** We don't use CDK: all infrastructure is managed with AWS CLI scripts plus `infra/RUNBOOK.md` in `iorgadragos/studio`. **Never run `cdk`** (ADR 0011). Until the old CloudFormation stacks are retired, also don't change stack-owned resources with the CLI. Site **content** deploys (GitHub workflow: S3 sync + invalidation) continue as normal. The CDK code here is kept only until the retirement, then removed.
-
 The website of **Dragos Iorga**, a senior tech lead delivering software end to end as an AI-augmented, one-person product team.
 It is built in public with the same standards I use for client work.
 
@@ -24,7 +22,13 @@ Blog posts live in `src/content/blog/*.md(x)`. Set `draft: false` to publish; fu
 ## Infrastructure
 The site runs on private S3 + CloudFront (OAC) with security headers and a strict CSP, in a dedicated AWS account. It deploys from `main` via GitHub Actions with OIDC (no long-lived keys); the deploy role can only sync this bucket and invalidate this distribution.
 
-The infrastructure itself is managed **with the AWS CLI and a documented runbook**, in the studio's private ops repo. No CDK, Terraform or CloudFormation templates. The `infra/` folder here is legacy, frozen and due for removal; don't run anything from it.
+The infrastructure itself is managed **with the AWS CLI and a documented runbook** in the studio's private ops repo. No CDK, Terraform or CloudFormation templates (the old CloudFormation stacks are being retired).
+
+`edge/` holds what runs at the edge, as reviewed and tested data that the infra scripts apply:
+- `edge/rewrite.js`: the CloudFront Function (pretty URLs, www → apex 301 keeping the query string), unit-tested in `edge/rewrite.test.ts`.
+- `edge/security-headers.json`: HSTS, CSP, frame/referrer/permissions policies, tested in `edge/security-headers.test.ts`.
+
+Changing these files deploys nothing by itself: the change ships when the ops repo's script applies it (and records it in its runbook).
 
 Pushes to `main` deploy the site via the repo variables `AWS_DEPLOY_ROLE_ARN`, `SITE_BUCKET` and `DISTRIBUTION_ID`, in this order:
 1. Upload hashed `_astro/*` assets with a 1-year immutable cache.

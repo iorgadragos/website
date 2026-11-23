@@ -16,9 +16,9 @@ if (mode !== 'dist' && mode !== 'launch') {
 }
 
 // Single source of truth for "served as a file": the regex inside the CloudFront Function.
-const fnSource = readFileSync(join(root, 'infra/lib/edge/rewrite.js'), 'utf8');
+const fnSource = readFileSync(join(root, 'edge/rewrite.js'), 'utf8');
 const m = fnSource.match(/var FILE_EXT = \/(.+)\/(\w*);/);
-if (!m) throw new Error('FILE_EXT not found in infra/lib/edge/rewrite.js');
+if (!m) throw new Error('FILE_EXT not found in edge/rewrite.js');
 const FILE_EXT = new RegExp(m[1], m[2]);
 
 const errors: string[] = [];

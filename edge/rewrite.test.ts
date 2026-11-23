@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const src = readFileSync(join(__dirname, '../lib/edge/rewrite.js'), 'utf8').replaceAll('__DOMAIN__', 'example.com');
+const src = readFileSync(join(__dirname, 'rewrite.js'), 'utf8').replaceAll('__DOMAIN__', 'example.com');
 // eslint-disable-next-line no-new-func
 const handler = new Function(`${src}; return handler;`)() as (e: unknown) => any;
 const ev = (uri: string, host = 'example.com', querystring: Record<string, unknown> = {}) =>
