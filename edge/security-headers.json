@@ -1,0 +1,17 @@
+{
+  "$comment": "Response headers for the CloudFront response-headers policy, applied by the studio infra script (ADR 0011). Mapping to ResponseHeadersPolicyConfig: every security header and custom header has Override=true; XSSProtection is not set (live returns an empty object). Unit-tested in edge/security-headers.test.ts.",
+  "name": "iorgadragos-website-security-headers",
+  "strictTransportSecurity": {
+    "maxAgeSeconds": 31536000,
+    "includeSubdomains": true,
+    "preload": true
+  },
+  "contentTypeOptions": true,
+  "frameOptions": "DENY",
+  "referrerPolicy": "strict-origin-when-cross-origin",
+  "contentSecurityPolicy": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+  "customHeaders": {
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
+  },
+  "override": true
+}

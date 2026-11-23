@@ -1,5 +1,5 @@
 // CloudFront Function (viewer request, runtime cloudfront-js-2.0).
-// The DOMAIN placeholder (two underscores each side) is replaced at synth time (see site-stack.ts). Unit-tested in test/rewrite.test.ts.
+// The DOMAIN placeholder (two underscores each side) is replaced by the studio infra script when it publishes the function (ADR 0011). Unit-tested in edge/rewrite.test.ts.
 // Extensions the build actually emits. Anything else is treated as a page, so slugs may contain dots.
 var FILE_EXT = /\.(html|xml|txt|json|webmanifest|ico|svg|png|jpe?g|gif|webp|avif|css|js|mjs|map|woff2?|pdf)$/i;
 
