@@ -5,9 +5,7 @@
   "scripts": {
     "build": "tsc --noEmit",
     "test": "vitest run",
-    "synth": "cdk synth",
-    "diff": "cdk diff",
-    "deploy": "cdk deploy --all"
+    "deploy": "echo 'FROZEN: CDK is not used (ADR 0011). Infra is AWS CLI + RUNBOOK in the studio ops repo.' >&2; exit 1"
   },
   "dependencies": {
     "aws-cdk-lib": "^2.278.0",

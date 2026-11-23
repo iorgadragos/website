@@ -1,7 +1,7 @@
 name: Deploy site
 # Uploads the built site to S3 and invalidates CloudFront.
-# Infra changes are deployed separately (`cd infra && npx cdk deploy`) after reviewing `cdk diff`.
-# Enable by setting repo variables: AWS_DEPLOY_ROLE_ARN, SITE_BUCKET, DISTRIBUTION_ID (from the stack outputs).
+# Infrastructure is NOT deployed from this repo: it's managed with AWS CLI scripts + a RUNBOOK in the studio ops repo (ADR 0011). No CDK.
+# Enabled by repo variables AWS_DEPLOY_ROLE_ARN, SITE_BUCKET, DISTRIBUTION_ID (values recorded in the ops RUNBOOK).
 on:
   push:
     branches: [main]
