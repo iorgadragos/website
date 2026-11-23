@@ -14,7 +14,7 @@ jobs:
         with: { node-version: 24, cache: npm }
       - run: npm ci
       - name: No CDK/infra code in this repo (ADR 0011)
-        run: test ! -e infra && ! git ls-files | grep -E '(^|/)cdk\.(out|json)' 
+        run: test ! -e infra && ! git ls-files | grep -E '(^|/)cdk(\.context)?\.(out|json)'
       - run: npm test
       - run: npm run build # includes astro check
       - run: npm run check:dist
