@@ -3,6 +3,7 @@ import { config } from '../lib/config';
 import { SiteStack } from '../lib/site-stack';
 
 // FROZEN (ADR 0011): CDK is never used to deploy. Synthesis is allowed only in CI (tests + synth check).
+// This is a speed bump, not a lock (CI=1 bypasses it); the rule itself is ADR 0011 + review.
 if (!process.env.CI) {
   throw new Error('FROZEN (ADR 0011): CDK is not used. Infra is AWS CLI scripts + RUNBOOK in the studio ops repo.');
 }
