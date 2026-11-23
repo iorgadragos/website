@@ -1,19 +1,26 @@
 /**
- * Site + DNS configuration. Values marked VERIFY must be checked against the current
- * DNS zone export before the NS cutover (see studio/hq Studio Ops issue "Migrate DNS").
+ * Site configuration. The stack runs in the iorgadragos-studio AWS account (profile `iorgadragos`).
+ * Shared resources are owned by iorgadragos/aws-foundation and only referenced here:
+ * - the iorgadragos.ro hosted zone (mail records, apex/www alias records),
+ * - the account's GitHub Actions OIDC provider.
  */
 export const config = {
+  project: 'iorgadragos-website',
+  /** iorgadragos-studio account. Pinned so a deploy under the wrong profile fails instead of building a second stack. */
+  account: '732370035548',
   domain: 'iorgadragos.ro',
-  githubOrg: 'iorgadragos',
-  githubRepo: 'website',
-  githubBranch: 'main',
-  // Google Workspace mail records (VERIFY against the current zone; Google's current MX is smtp.google.com)
-  mx: [{ priority: 1, hostName: 'smtp.google.com' }],
-  txtRoot: [
-    'v=spf1 include:_spf.google.com ~all',
-    // 'google-site-verification=VERIFY',
-  ],
-  // DKIM: Google Admin → Apps → Gmail → Authenticate email → copy the TXT value (VERIFY)
-  dkim: { selector: 'google', value: '' },
-  dmarc: 'v=DMARC1; p=none; adkim=s; aspf=s',
+  /** Hosted zone owned by aws-foundation (`Dns` stack). Not a secret. */
+  hostedZoneId: 'Z02884203S6GFG8WANCF0',
+  github: {
+    org: 'iorgadragos',
+    repo: 'website',
+    /**
+     * The repo uses GitHub's immutable OIDC subject format (`repo:<org>@<org-id>/<repo>@<repo-id>`),
+     * which survives renames and prevents re-created-repo squatting. Check with:
+     * `gh api repos/iorgadragos/website/actions/oidc/customization/sub`.
+     */
+    subjectPrefix: 'repo:iorgadragos@360098670/website@1468339349',
+    /** The deploy job runs in this GitHub environment, restricted to the `main` branch. */
+    environment: 'production',
+  },
 } as const;
