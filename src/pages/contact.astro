@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { SITE, LINKS } from '../consts';
+import { SITE, LINKS, isSet } from '../consts';
 ---
 <Base title="Contact" description="Get in touch with Dragos Iorga.">
   <div class="container"><section class="prose">
@@ -8,6 +8,6 @@ import { SITE, LINKS } from '../consts';
     <h1>Get in touch</h1>
     <p class="lead">The fastest way to start is a <a href="/book/">free discovery call</a>. Otherwise, email me. I reply within two business days.</p>
     <p><a class="btn btn-primary" href={`mailto:${SITE.email}`}>{SITE.email}</a></p>
-    <p class="muted">Also on <a href={LINKS.linkedin}>LinkedIn</a> and <a href={LINKS.github}>GitHub</a>.</p>
+    <p class="muted">Also on {isSet(LINKS.linkedin) && <><a href={LINKS.linkedin}>LinkedIn</a> and </>}<a href={LINKS.github}>GitHub</a>.</p>
   </section></div>
 </Base>
