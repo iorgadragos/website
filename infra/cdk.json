@@ -1,6 +1,7 @@
 {
   "app": "npx tsx bin/app.ts",
   "context": {
+    "issueCert": false,
     "useCustomDomain": false
   }
 }

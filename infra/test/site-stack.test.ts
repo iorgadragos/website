@@ -3,9 +3,9 @@ import { Match, Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, it } from 'vitest';
 import { SiteStack } from '../lib/site-stack';
 
-const synth = (useCustomDomain: boolean) =>
+const synth = (useCustomDomain: boolean, issueCert = false) =>
   Template.fromStack(new SiteStack(new App(), 'Test', {
-    env: { account: '123456789012', region: 'us-east-1' }, useCustomDomain,
+    env: { account: '123456789012', region: 'us-east-1' }, useCustomDomain, issueCert,
   }));
 
 describe('SiteStack', () => {
@@ -49,17 +49,45 @@ describe('SiteStack', () => {
     }
   });
 
-  it('scopes the deploy role to its own bucket and distribution only', () => {
-    const policies = synth(false).findResources('AWS::IAM::Policy');
-    const json = JSON.stringify(policies);
-    expect(json).not.toContain('"Resource":"*"');
-    expect(json).toContain('cloudfront:CreateInvalidation');
+  it('gives the deploy role exactly the actions sync + invalidation need, on its own resources only', () => {
+    const t = synth(false);
+    const role = Object.values(t.findResources('AWS::IAM::Role'))[0] as any;
+    expect(role.Properties.ManagedPolicyArns).toBeUndefined();
+    expect(role.Properties.Policies).toBeUndefined();
+    const statements = Object.values(t.findResources('AWS::IAM::Policy')).flatMap((p: any) => p.Properties.PolicyDocument.Statement);
+    const allows = statements.filter((st: any) => st.Effect === 'Allow');
+    const actions = allows.flatMap((st: any) => [st.Action].flat()).sort();
+    expect(actions).toEqual(['cloudfront:CreateInvalidation', 's3:DeleteObject', 's3:GetObject', 's3:ListBucket', 's3:PutObject']);
+    for (const st of allows) {
+      const resources = JSON.stringify([st.Resource].flat());
+      expect(resources).not.toMatch(/"\*"|:::\*|\*"$/);
+      expect(resources).toMatch(/SiteBucket|Distribution/);
+    }
+    const deny = statements.find((st: any) => st.Effect === 'Deny');
+    expect(deny.Action).toContain('s3:DeleteObjectVersion');
   });
 
-  it('only creates a certificate in custom-domain mode and never DNS records', () => {
+  it('protects the stack and tags everything with the project', () => {
+    const stack = new SiteStack(new App(), 'T', { env: { account: '123456789012', region: 'us-east-1' }, useCustomDomain: false, issueCert: false });
+    expect(stack.terminationProtection).toBe(true);
+    Template.fromStack(stack).hasResourceProperties('AWS::S3::Bucket', {
+      Tags: Match.arrayWith([{ Key: 'project', Value: 'iorgadragos-website' }]),
+    });
+  });
+
+  it('creates the certificate only in cutover modes, and no RecordSet resources', () => {
     expect(Object.keys(synth(false).findResources('AWS::CertificateManager::Certificate'))).toHaveLength(0);
+    // Step A: certificate only, distribution untouched (no aliases).
+    const a = synth(false, true);
+    a.resourceCountIs('AWS::CertificateManager::Certificate', 1);
+    a.hasResourceProperties('AWS::CloudFront::Distribution', { DistributionConfig: Match.objectLike({ Aliases: Match.absent() }) });
+    // Step B: aliases attached. The cert's DNS validation is the one accepted write into the imported zone.
     const t = synth(true);
     t.resourceCountIs('AWS::CertificateManager::Certificate', 1);
+    t.hasResourceProperties('AWS::CertificateManager::Certificate', {
+      DomainValidationOptions: Match.arrayWith([Match.objectLike({ HostedZoneId: 'Z02884203S6GFG8WANCF0' })]),
+    });
+    t.hasResourceProperties('AWS::CloudFront::Distribution', { DistributionConfig: Match.objectLike({ Aliases: ['iorgadragos.ro', 'www.iorgadragos.ro'] }) });
     t.resourceCountIs('AWS::Route53::RecordSet', 0); // DNS records belong to aws-foundation
   });
 });

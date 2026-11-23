@@ -1,17 +1,24 @@
-import { CfnOutput, Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
+import { CfnOutput, Duration, RemovalPolicy, Stack, StackProps, Tags } from 'aws-cdk-lib';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Construct } from 'constructs';
 import { config } from './config';
 
 export interface SiteStackProps extends StackProps {
   /**
-   * Phase 2 (launch cutover): ACM cert + apex/www aliases on the distribution. The DNS records are flipped
-   * in aws-foundation (`dns.siteTarget`). Requires the aliases to be removed from the legacy distribution first.
+   * Cutover step A (days before launch, after the NS change): issue the ACM certificate only.
+   * DNS validation writes two CNAMEs into the imported zone (the one accepted write to it).
+   */
+  issueCert: boolean;
+  /**
+   * Cutover step B (launch window): attach apex/www + the certificate to the distribution (implies issueCert).
+   * The DNS records are flipped in aws-foundation (`dns.siteTarget`). See README, "Cutover".
    */
   useCustomDomain: boolean;
 }
@@ -22,13 +29,17 @@ export interface SiteStackProps extends StackProps {
  * Deployed in us-east-1 so the CloudFront certificate can live in the same stack.
  *
  * Runs in the iorgadragos-studio account. The hosted zone (incl. apex/www alias records) and the GitHub
- * OIDC provider belong to iorgadragos/aws-foundation and are imported here, never created or changed.
+ * OIDC provider belong to iorgadragos/aws-foundation and are imported here. The only write into the zone is
+ * ACM's DNS-validation CNAMEs for this stack's certificate (cutover step A).
  * Every owned resource is named/tagged with `config.project`.
  */
 export class SiteStack extends Stack {
   constructor(scope: Construct, id: string, props: SiteStackProps) {
-    super(scope, id, props);
+    super(scope, id, { terminationProtection: true, ...props });
     const { domain, project } = config;
+    Tags.of(this).add('project', project);
+    Tags.of(this).add('repo', `${config.github.org}/${config.github.repo}`);
+    Tags.of(this).add('managed-by', 'cdk');
 
     // --- DNS (shared zone, imported) -------------------------------------------
     const zone = route53.HostedZone.fromHostedZoneAttributes(this, 'Zone', {
@@ -50,19 +61,8 @@ export class SiteStack extends Stack {
     const rewrite = new cloudfront.Function(this, 'Rewrite', {
       functionName: `${project}-rewrite`,
       runtime: cloudfront.FunctionRuntime.JS_2_0,
-      code: cloudfront.FunctionCode.fromInline(`
-function handler(event) {
-  var req = event.request;
-  var host = req.headers.host && req.headers.host.value;
-  if (host === 'www.${domain}') {
-    return { statusCode: 301, statusDescription: 'Moved Permanently',
-      headers: { location: { value: 'https://${domain}' + req.uri } } };
-  }
-  var uri = req.uri;
-  if (uri.endsWith('/')) { req.uri = uri + 'index.html'; }
-  else if (!uri.split('/').pop().includes('.')) { req.uri = uri + '/index.html'; }
-  return req;
-}`),
+      code: cloudfront.FunctionCode.fromInline(
+        readFileSync(join(__dirname, 'edge/rewrite.js'), 'utf8').replaceAll('__DOMAIN__', domain)),
     });
 
     const headers = new cloudfront.ResponseHeadersPolicy(this, 'Headers', {
@@ -84,7 +84,7 @@ function handler(event) {
     });
 
     let certificate: acm.ICertificate | undefined;
-    if (props.useCustomDomain) {
+    if (props.issueCert || props.useCustomDomain) {
       certificate = new acm.Certificate(this, 'Cert', {
         domainName: domain,
         subjectAlternativeNames: [`www.${domain}`],
@@ -99,7 +99,7 @@ function handler(event) {
       httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
       minimumProtocolVersion: props.useCustomDomain ? cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021 : undefined,
       domainNames: props.useCustomDomain ? [domain, `www.${domain}`] : undefined,
-      certificate,
+      certificate: props.useCustomDomain ? certificate : undefined,
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(bucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
@@ -133,8 +133,18 @@ function handler(event) {
         },
       }),
     });
-    bucket.grantReadWrite(deployRole);
-    bucket.grantDelete(deployRole);
+    // Explicit least privilege: sync needs list + get/put/delete current objects. No version deletion,
+    // so a bad deploy can always be rolled back from the bucket's versions.
+    deployRole.addToPolicy(new iam.PolicyStatement({ actions: ['s3:ListBucket'], resources: [bucket.bucketArn] }));
+    deployRole.addToPolicy(new iam.PolicyStatement({
+      actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
+      resources: [bucket.arnForObjects('*')],
+    }));
+    deployRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.DENY,
+      actions: ['s3:DeleteObjectVersion', 's3:PutBucketVersioning', 's3:PutLifecycleConfiguration', 's3:PutBucketPolicy', 's3:DeleteBucket'],
+      resources: [bucket.bucketArn, bucket.arnForObjects('*')],
+    }));
     deployRole.addToPolicy(new iam.PolicyStatement({
       actions: ['cloudfront:CreateInvalidation'],
       resources: [`arn:aws:cloudfront::${this.account}:distribution/${distribution.distributionId}`],

@@ -6,6 +6,8 @@
  */
 export const config = {
   project: 'iorgadragos-website',
+  /** iorgadragos-studio account. Pinned so a deploy under the wrong profile fails instead of building a second stack. */
+  account: '732370035548',
   domain: 'iorgadragos.ro',
   /** Hosted zone owned by aws-foundation (`Dns` stack). Not a secret. */
   hostedZoneId: 'Z02884203S6GFG8WANCF0',
