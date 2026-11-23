@@ -1,16 +1,14 @@
 /**
- * Site configuration.
- *
- * The AWS account is SHARED with other projects. This stack must only create resources it owns
- * (prefixed/tagged `iorgadragos-website`) and must reference, never modify, shared ones:
- * - the Route 53 hosted zone for the domain (pre-existing; mail records stay unmanaged here),
- * - the GitHub Actions OIDC provider (account-wide singleton).
+ * Site configuration. The stack runs in the iorgadragos-studio AWS account (profile `iorgadragos`).
+ * Shared resources are owned by iorgadragos/aws-foundation and only referenced here:
+ * - the iorgadragos.ro hosted zone (mail records, apex/www alias records),
+ * - the account's GitHub Actions OIDC provider.
  */
 export const config = {
   project: 'iorgadragos-website',
   domain: 'iorgadragos.ro',
-  /** Pre-existing public hosted zone (registrar NS already point to it). Not a secret. */
-  hostedZoneId: 'Z3I34ZUV1084AT',
+  /** Hosted zone owned by aws-foundation (`Dns` stack). Not a secret. */
+  hostedZoneId: 'Z02884203S6GFG8WANCF0',
   github: {
     org: 'iorgadragos',
     repo: 'website',
@@ -23,9 +21,4 @@ export const config = {
     /** The deploy job runs in this GitHub environment, restricted to the `main` branch. */
     environment: 'production',
   },
-  /**
-   * DMARC is the only mail record this stack owns (it did not exist before).
-   * MX / SPF / site-verification TXT pre-date this stack and stay managed outside IaC.
-   */
-  dmarc: 'v=DMARC1; p=none; adkim=s; aspf=s',
 } as const;

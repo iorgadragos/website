@@ -56,10 +56,10 @@ describe('SiteStack', () => {
     expect(json).toContain('cloudfront:CreateInvalidation');
   });
 
-  it('only creates a certificate and alias records in custom-domain mode', () => {
+  it('only creates a certificate in custom-domain mode and never DNS records', () => {
     expect(Object.keys(synth(false).findResources('AWS::CertificateManager::Certificate'))).toHaveLength(0);
     const t = synth(true);
     t.resourceCountIs('AWS::CertificateManager::Certificate', 1);
-    t.resourceCountIs('AWS::Route53::RecordSet', 1 /* DMARC */ + 4 /* A/AAAA apex+www */);
+    t.resourceCountIs('AWS::Route53::RecordSet', 0); // DNS records belong to aws-foundation
   });
 });

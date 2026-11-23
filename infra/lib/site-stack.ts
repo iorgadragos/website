@@ -4,26 +4,26 @@ import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as route53 from 'aws-cdk-lib/aws-route53';
-import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import { Construct } from 'constructs';
 import { config } from './config';
 
 export interface SiteStackProps extends StackProps {
   /**
-   * Phase 2 (launch cutover): attach apex/www + ACM cert and take over the A/AAAA records.
-   * Requires the aliases to be removed from the legacy distribution first (see README, "Cutover").
+   * Phase 2 (launch cutover): ACM cert + apex/www aliases on the distribution. The DNS records are flipped
+   * in aws-foundation (`dns.siteTarget`). Requires the aliases to be removed from the legacy distribution first.
    */
   useCustomDomain: boolean;
 }
 
 /**
  * Static site: private S3 bucket + CloudFront (OAC), security headers, URL rewrite,
- * DMARC + alias records in the existing Route 53 zone, and a least-privilege GitHub OIDC deploy role.
+ * an ACM certificate validated in the studio hosted zone, and a least-privilege GitHub OIDC deploy role.
  * Deployed in us-east-1 so the CloudFront certificate can live in the same stack.
  *
- * Shared-account rules: the hosted zone and the GitHub OIDC provider are imported (never created,
- * changed or deleted here); every owned resource is named/tagged with `config.project`.
+ * Runs in the iorgadragos-studio account. The hosted zone (incl. apex/www alias records) and the GitHub
+ * OIDC provider belong to iorgadragos/aws-foundation and are imported here, never created or changed.
+ * Every owned resource is named/tagged with `config.project`.
  */
 export class SiteStack extends Stack {
   constructor(scope: Construct, id: string, props: SiteStackProps) {
@@ -35,7 +35,6 @@ export class SiteStack extends Stack {
       hostedZoneId: config.hostedZoneId,
       zoneName: domain,
     });
-    new route53.TxtRecord(this, 'Dmarc', { zone, recordName: '_dmarc', values: [config.dmarc] });
 
     // --- Storage -------------------------------------------------------------
     const bucket = new s3.Bucket(this, 'SiteBucket', {
@@ -115,14 +114,7 @@ function handler(event) {
       ],
     });
 
-    if (props.useCustomDomain) {
-      const target = route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distribution));
-      for (const name of [undefined, 'www']) {
-        // deleteExisting: take over the records that point at the legacy distribution.
-        new route53.ARecord(this, `A${name ?? 'Apex'}`, { zone, recordName: name, target, deleteExisting: true });
-        new route53.AaaaRecord(this, `Aaaa${name ?? 'Apex'}`, { zone, recordName: name, target, deleteExisting: true });
-      }
-    }
+    // Apex/www alias records live in aws-foundation (dns.siteTarget); flip them to DistributionDomain at cutover.
 
     // --- GitHub Actions OIDC deploy role -----------------------------------------
     // The OIDC provider is an account-wide singleton shared with other projects: import only.
@@ -150,6 +142,7 @@ function handler(event) {
 
     new CfnOutput(this, 'BucketName', { value: bucket.bucketName });
     new CfnOutput(this, 'DistributionId', { value: distribution.distributionId });
+    new CfnOutput(this, 'DistributionDomain', { value: distribution.distributionDomainName });
     new CfnOutput(this, 'DistributionUrl', { value: `https://${distribution.distributionDomainName}` });
     new CfnOutput(this, 'DeployRoleArn', { value: deployRole.roleArn });
   }
