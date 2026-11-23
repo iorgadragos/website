@@ -7,7 +7,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 const script = join(__dirname, '../../scripts/check-site.ts');
 const run = (dist: string, mode = 'dist') => {
   try {
-    const env = { ...process.env, CHECK_SITE_DIST: dist };
+    const env: NodeJS.ProcessEnv = { ...process.env, CHECK_SITE_DIST: dist };
     delete env.CI; // the override is ignored in CI by design; the tests need it
     execFileSync(process.execPath, [script, mode], { env, stdio: 'pipe' });
     return { code: 0, err: '' };
