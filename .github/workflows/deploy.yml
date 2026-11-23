@@ -16,14 +16,15 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with: { node-version: 24, cache: npm }
-      - run: npm ci && npm test && npm run build
+      - run: npm ci && npm test && npm run build && npm run check:dist
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
+          allowed-account-ids: '732370035548' # iorgadragos-studio only
       # Order matters: upload new files first (never delete before the new HTML is live), invalidate, then prune.
       - name: Upload fingerprinted assets (1 year, immutable)
         run: aws s3 sync dist "s3://${{ vars.SITE_BUCKET }}" --exclude "*" --include "_astro/*" --cache-control "public,max-age=31536000,immutable"

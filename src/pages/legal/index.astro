@@ -6,7 +6,7 @@ import { LEGAL, SITE, isSet } from '../../consts';
   <div class="container"><section class="prose">
     <h1>Legal &amp; privacy</h1>
     <h2>Imprint</h2>
-    <p>{LEGAL.entity}<br />CUI: {LEGAL.cui} · VAT: {LEGAL.vat} {isSet(LEGAL.regCom) && <> · Reg. Com.: {LEGAL.regCom}</>}<br />{LEGAL.address}<br />Email: <a href={`mailto:${SITE.email}`}>{SITE.email}</a></p>
+    <p>{LEGAL.entity}<br />CUI: {LEGAL.cui} · VAT: {LEGAL.vat}{isSet(LEGAL.regCom) && <> · Reg. Com.: {LEGAL.regCom}</>}<br />{LEGAL.address}<br />Email: <a href={`mailto:${SITE.email}`}>{SITE.email}</a></p>
     <h2>Privacy</h2>
     <p class="muted">Draft. This will be replaced by the reviewed privacy policy before launch.</p>
     <p>This site uses no cookies and no tracking. When you book a call, the scheduling provider (Cal.com) and the payment provider

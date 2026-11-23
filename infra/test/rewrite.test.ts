@@ -39,7 +39,7 @@ describe('viewer-request rewrite', () => {
     expect(res.headers.location.value).toBe('https://example.com/blog/x?utm_source=linkedin&tag=a&tag=b&flag');
   });
 
-  it('passes already-encoded query values through unchanged (CloudFront delivers them encoded)', () => {
+  it('passes query values through byte-for-byte (logic only; real CloudFront encoding is verified live in the cutover runbook)', () => {
     const res = handler(ev('/', 'www.example.com', { q: { value: 'a%20b' }, x: { value: '1%262' } }));
     expect(res.headers.location.value).toBe('https://example.com/?q=a%20b&x=1%262');
   });

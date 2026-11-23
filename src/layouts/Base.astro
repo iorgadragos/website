@@ -30,8 +30,8 @@ const year = new Date().getFullYear();
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     {!noindex && <meta property="og:url" content={canonical} />}
-    <meta property="og:image" content={new URL('/og.png', Astro.site)} />
-    <meta name="twitter:card" content="summary_large_image" />
+    {/* og:image omitted until the 1200×630 image exists (ticketed); a missing image breaks link previews. */}
+    <meta name="twitter:card" content="summary" />
     <script type="application/ld+json" set:html={JSON.stringify({
       '@context': 'https://schema.org', '@type': 'Person', name: SITE.name, url: SITE.url,
       jobTitle: 'Senior Tech Lead', address: { '@type': 'PostalAddress', addressLocality: 'Bucharest', addressCountry: 'RO' },

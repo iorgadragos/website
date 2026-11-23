@@ -46,7 +46,7 @@ Pushes to `main` deploy the site via the repo variables `AWS_DEPLOY_ROLE_ARN`, `
 **0. Pre-flight**
 - `dig +short NS iorgadragos.ro` must return **only** the studio zone's name servers (listed in `aws.md`).
 - The registrar must have no DS (DNSSEC) record for the domain.
-- `npm run build && npm run check:launch` passes, so every placeholder in `src/consts.ts` is filled (LinkedIn, Sessionize, Reg. Com.).
+- `npm run build && npm run check:launch` passes: every `LINKS`/`LEGAL` value in `src/consts.ts` is filled, and the build has no placeholders or unservable files. CI runs the build half (`check:dist`) on every PR.
 
 **A. Certificate (days before, no downtime)**
 - In a PR, set `"issueCert": true` in `infra/cdk.json`. Merge, then run `AWS_PROFILE=iorgadragos npx cdk deploy`.
