@@ -1,5 +1,7 @@
 # website: iorgadragos.ro
 
+> **⚠ FROZEN (ADR 0011, iorgadragos/studio#53).** We don't use CDK: all infrastructure is managed with AWS CLI scripts plus `infra/RUNBOOK.md` in `iorgadragos/studio`. Until the CloudFormation stacks are retired, **don't run any `cdk` command** and don't change stack-owned resources with the CLI. Site **content** deploys (GitHub workflow: S3 sync + invalidation) continue as normal. The CDK code here is kept only until the retirement, then removed.
+
 A public repo and a portfolio piece, so keep it exemplary. Follow the workspace rules in `../../CLAUDE.md`.
 
 - Copy and positioning come from `../hq/docs/strategy/positioning.md` and `../hq/content/`. Don't invent claims or prices; they come from `../hq/docs/strategy/offers-and-pricing.md`.
