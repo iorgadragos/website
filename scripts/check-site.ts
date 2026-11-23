@@ -1,13 +1,14 @@
 // Site gates. Run with Node >= 24 (native TypeScript type stripping), from any directory.
 //   node scripts/check-site.ts dist     → CI: built output has no placeholders, no unservable files, no file-like page URLs
 //   node scripts/check-site.ts launch   → cutover pre-flight: the `dist` checks + every LINKS/LEGAL value is filled
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, extname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LEGAL, LINKS, isSet } from '../src/consts.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const dist = join(root, 'dist');
+// CHECK_SITE_DIST overrides the build dir (used by the script's own tests).
+const dist = process.env.CHECK_SITE_DIST ?? join(root, 'dist');
 const mode = process.argv[2];
 if (mode !== 'dist' && mode !== 'launch') {
   console.error('usage: node scripts/check-site.ts <dist|launch>');
@@ -21,10 +22,17 @@ if (!m) throw new Error('FILE_EXT not found in infra/lib/edge/rewrite.js');
 const FILE_EXT = new RegExp(m[1], m[2]);
 
 const errors: string[] = [];
+// Local OS junk is never deployed meaningfully; skip it (dotfiles other than .well-known).
+const ignored = (name: string) => name.startsWith('.') && name !== '.well-known';
 const walk = (dir: string): string[] =>
-  readdirSync(dir).flatMap((name) => {
+  readdirSync(dir).filter((n) => !ignored(n)).flatMap((name) => {
     const p = join(dir, name);
-    return statSync(p).isDirectory() ? [p + '/', ...walk(p)] : [p];
+    const st = lstatSync(p);
+    if (st.isSymbolicLink()) {
+      errors.push(`symlink in build output (not allowed): /${relative(dist, p)}`);
+      return [];
+    }
+    return st.isDirectory() ? [p + '/', ...walk(p)] : [p];
   });
 
 if (!existsSync(dist)) {
