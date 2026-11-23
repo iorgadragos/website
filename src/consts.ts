@@ -22,7 +22,8 @@ export const LINKS = {
 
 export const LEGAL = {
   entity: 'Iorga M Dragos PFA',
-  cui: 'TODO-CUI',
+  cui: '41829171',
+  vat: 'RO41829171',
   regCom: 'TODO-F40/xxxx/yyyy',
   address: 'Bucharest, Romania',
 };
