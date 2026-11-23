@@ -1,7 +1,6 @@
 {
   "app": "npx tsx bin/app.ts",
   "context": {
-    "useCustomDomain": false,
-    "createOidcProvider": true
+    "useCustomDomain": false
   }
 }

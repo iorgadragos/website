@@ -10,31 +10,32 @@ import { Construct } from 'constructs';
 import { config } from './config';
 
 export interface SiteStackProps extends StackProps {
-  /** Phase 2: attach the apex/www domain + ACM cert (only after NS are delegated to Route 53). */
+  /**
+   * Phase 2 (launch cutover): attach apex/www + ACM cert and take over the A/AAAA records.
+   * Requires the aliases to be removed from the legacy distribution first (see README, "Cutover").
+   */
   useCustomDomain: boolean;
-  /** Create the GitHub OIDC provider (false if the account already has one). */
-  createOidcProvider: boolean;
 }
 
 /**
  * Static site: private S3 bucket + CloudFront (OAC), security headers, URL rewrite,
- * Route 53 zone incl. Google Workspace mail records, and a least-privilege GitHub OIDC deploy role.
+ * DMARC + alias records in the existing Route 53 zone, and a least-privilege GitHub OIDC deploy role.
  * Deployed in us-east-1 so the CloudFront certificate can live in the same stack.
+ *
+ * Shared-account rules: the hosted zone and the GitHub OIDC provider are imported (never created,
+ * changed or deleted here); every owned resource is named/tagged with `config.project`.
  */
 export class SiteStack extends Stack {
   constructor(scope: Construct, id: string, props: SiteStackProps) {
     super(scope, id, props);
-    const { domain } = config;
+    const { domain, project } = config;
 
-    // --- DNS ---------------------------------------------------------------
-    const zone = new route53.PublicHostedZone(this, 'Zone', { zoneName: domain });
-    zone.applyRemovalPolicy(RemovalPolicy.RETAIN);
-    new route53.MxRecord(this, 'Mx', { zone, values: [...config.mx] });
-    new route53.TxtRecord(this, 'RootTxt', { zone, values: [...config.txtRoot] });
+    // --- DNS (shared zone, imported) -------------------------------------------
+    const zone = route53.HostedZone.fromHostedZoneAttributes(this, 'Zone', {
+      hostedZoneId: config.hostedZoneId,
+      zoneName: domain,
+    });
     new route53.TxtRecord(this, 'Dmarc', { zone, recordName: '_dmarc', values: [config.dmarc] });
-    if (config.dkim.value) {
-      new route53.TxtRecord(this, 'Dkim', { zone, recordName: `${config.dkim.selector}._domainkey`, values: [config.dkim.value] });
-    }
 
     // --- Storage -------------------------------------------------------------
     const bucket = new s3.Bucket(this, 'SiteBucket', {
@@ -48,6 +49,7 @@ export class SiteStack extends Stack {
 
     // --- Edge ----------------------------------------------------------------
     const rewrite = new cloudfront.Function(this, 'Rewrite', {
+      functionName: `${project}-rewrite`,
       runtime: cloudfront.FunctionRuntime.JS_2_0,
       code: cloudfront.FunctionCode.fromInline(`
 function handler(event) {
@@ -65,6 +67,7 @@ function handler(event) {
     });
 
     const headers = new cloudfront.ResponseHeadersPolicy(this, 'Headers', {
+      responseHeadersPolicyName: `${project}-security-headers`,
       securityHeadersBehavior: {
         strictTransportSecurity: { accessControlMaxAge: Duration.days(365), includeSubdomains: true, preload: true, override: true },
         contentTypeOptions: { override: true },
@@ -91,6 +94,7 @@ function handler(event) {
     }
 
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
+      comment: `${project} (${domain})`,
       defaultRootObject: 'index.html',
       priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
       httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
@@ -114,27 +118,26 @@ function handler(event) {
     if (props.useCustomDomain) {
       const target = route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distribution));
       for (const name of [undefined, 'www']) {
-        new route53.ARecord(this, `A${name ?? 'Apex'}`, { zone, recordName: name, target });
-        new route53.AaaaRecord(this, `Aaaa${name ?? 'Apex'}`, { zone, recordName: name, target });
+        // deleteExisting: take over the records that point at the legacy distribution.
+        new route53.ARecord(this, `A${name ?? 'Apex'}`, { zone, recordName: name, target, deleteExisting: true });
+        new route53.AaaaRecord(this, `Aaaa${name ?? 'Apex'}`, { zone, recordName: name, target, deleteExisting: true });
       }
     }
 
     // --- GitHub Actions OIDC deploy role -----------------------------------------
-    const providerArn = `arn:aws:iam::${this.account}:oidc-provider/token.actions.githubusercontent.com`;
-    const provider = props.createOidcProvider
-      ? new iam.OpenIdConnectProvider(this, 'GithubOidc', {
-          url: 'https://token.actions.githubusercontent.com',
-          clientIds: ['sts.amazonaws.com'],
-        })
-      : iam.OpenIdConnectProvider.fromOpenIdConnectProviderArn(this, 'GithubOidc', providerArn);
+    // The OIDC provider is an account-wide singleton shared with other projects: import only.
+    const provider = iam.OpenIdConnectProvider.fromOpenIdConnectProviderArn(
+      this, 'GithubOidc', `arn:aws:iam::${this.account}:oidc-provider/token.actions.githubusercontent.com`);
 
+    const { github } = config;
     const deployRole = new iam.Role(this, 'GithubDeployRole', {
-      description: `Deploy ${config.githubOrg}/${config.githubRepo} site content`,
+      roleName: `${project}-github-deploy`,
+      description: `GitHub Actions (${github.org}/${github.repo}, environment ${github.environment}): sync site content + invalidate CDN`,
       maxSessionDuration: Duration.hours(1),
       assumedBy: new iam.WebIdentityPrincipal(provider.openIdConnectProviderArn, {
-        StringEquals: { 'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com' },
-        StringLike: {
-          'token.actions.githubusercontent.com:sub': `repo:${config.githubOrg}/${config.githubRepo}:ref:refs/heads/${config.githubBranch}`,
+        StringEquals: {
+          'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com',
+          'token.actions.githubusercontent.com:sub': `${github.subjectPrefix}:environment:${github.environment}`,
         },
       }),
     });
@@ -149,6 +152,5 @@ function handler(event) {
     new CfnOutput(this, 'DistributionId', { value: distribution.distributionId });
     new CfnOutput(this, 'DistributionUrl', { value: `https://${distribution.distributionDomainName}` });
     new CfnOutput(this, 'DeployRoleArn', { value: deployRole.roleArn });
-    new CfnOutput(this, 'NameServers', { value: Stack.of(this).toJsonString(zone.hostedZoneNameServers) });
   }
 }
