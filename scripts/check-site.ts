@@ -56,6 +56,15 @@ if (!existsSync(dist)) {
   }
 }
 
+// The build marker (#18): present, a full SHA or "dev", and the commit being built when BUILD_SHA is set.
+if (existsSync(dist)) {
+  const vf = join(dist, 'version.txt');
+  const v = existsSync(vf) ? readFileSync(vf, 'utf8') : null;
+  if (v === null) errors.push('build marker /version.txt is missing (src/pages/version.txt.ts)');
+  else if (!/^([0-9a-f]{40}|dev)\n$/.test(v)) errors.push(`build marker /version.txt is malformed: ${JSON.stringify(v.slice(0, 60))}`);
+  else if (process.env.BUILD_SHA && v.trim() !== process.env.BUILD_SHA) errors.push(`build marker is ${v.trim()}, but BUILD_SHA is ${process.env.BUILD_SHA}`);
+}
+
 if (mode === 'launch') {
   for (const [group, values] of Object.entries({ LINKS, LEGAL })) {
     for (const [key, value] of Object.entries(values)) {

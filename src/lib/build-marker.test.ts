@@ -10,7 +10,9 @@ describe('build marker', () => {
     const sha = 'a'.repeat(40);
     expect(buildMarker(sha)).toBe(sha);
   });
-  it.each(['abc123', 'A'.repeat(40), 'g'.repeat(40), `${'a'.repeat(40)}\n`])('rejects a malformed SHA %j', (s) => {
+  it.each([
+    'abc123', 'abc1234', 'a'.repeat(39), 'a'.repeat(41), `x${'a'.repeat(40)}`, 'A'.repeat(40), 'g'.repeat(40), `${'a'.repeat(40)}\n`,
+  ])('rejects a malformed SHA %j', (s) => {
     expect(() => buildMarker(s)).toThrow(/BUILD_SHA/);
   });
 });

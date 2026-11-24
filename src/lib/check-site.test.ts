@@ -5,10 +5,12 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 
 const script = join(__dirname, '../../scripts/check-site.ts');
-const run = (dist: string, mode = 'dist') => {
+const run = (dist: string, mode = 'dist', extraEnv: NodeJS.ProcessEnv = {}) => {
   try {
     const env: NodeJS.ProcessEnv = { ...process.env, CHECK_SITE_DIST: dist };
     delete env.CI; // the override is ignored in CI by design; the tests need it
+    delete env.BUILD_SHA; // CI sets it job-wide; each test sets it explicitly
+    Object.assign(env, extraEnv);
     execFileSync(process.execPath, [script, mode], { env, stdio: 'pipe' });
     return { code: 0, err: '' };
   } catch (e: any) {
@@ -17,10 +19,13 @@ const run = (dist: string, mode = 'dist') => {
 };
 const dirs: string[] = [];
 afterAll(() => dirs.forEach((d) => rmSync(d, { recursive: true, force: true })));
-const fixture = (files: Record<string, string>) => {
+const fixture = (files: Record<string, string | undefined>) => {
   const dir = mkdtempSync(join(tmpdir(), 'check-site-'));
   dirs.push(dir);
-  for (const [rel, body] of Object.entries(files)) {
+  // Every fixture is a build with a valid marker unless the test overrides or removes it (undefined).
+  const all: Record<string, string | undefined> = { 'version.txt': 'dev\n', ...files };
+  for (const [rel, body] of Object.entries(all)) {
+    if (body === undefined) continue;
     mkdirSync(join(dir, rel, '..'), { recursive: true });
     writeFileSync(join(dir, rel), body);
   }
@@ -65,6 +70,23 @@ describe('check-site dist gate', () => {
     const missing = run(join(dir, 'nope'));
     expect(missing.code).toBe(1);
     expect(missing.err).toContain('dist/ is missing');
+  });
+  it('requires the /version.txt build marker (#18)', () => {
+    const r = run(fixture({ 'index.html': 'ok', 'version.txt': undefined }));
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('build marker /version.txt is missing');
+  });
+  it.each(['', 'dev', 'abc\n', `${'a'.repeat(40)}`, `${'A'.repeat(40)}\n`])('rejects a malformed marker %j', (v) => {
+    const r = run(fixture({ 'index.html': 'ok', 'version.txt': v }));
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('build marker /version.txt is malformed');
+  });
+  it('requires the marker to equal BUILD_SHA when it is set', () => {
+    const sha = 'a'.repeat(40);
+    expect(run(fixture({ 'index.html': 'ok', 'version.txt': `${sha}\n` }), 'dist', { BUILD_SHA: sha }).code).toBe(0);
+    const r = run(fixture({ 'index.html': 'ok', 'version.txt': `${sha}\n` }), 'dist', { BUILD_SHA: 'b'.repeat(40) });
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('but BUILD_SHA is');
   });
   it('rejects bad usage with exit 2', () => {
     expect(run(fixture({}), 'bogus').code).toBe(2);

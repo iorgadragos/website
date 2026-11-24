@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with: { node-version: 24, cache: npm }
       - run: npm ci && npm test && npm run build && npm run check:dist
-        env: { BUILD_SHA: "${{ github.sha }}" }   # served as /version.txt, polled by smoke (#18)
+        env: { BUILD_SHA: "${{ github.sha }}" }   # served as /version.txt (checked by check:dist), polled by smoke (#18)
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}

@@ -12,7 +12,8 @@ const EXPECTED_SHA = process.env.EXPECTED_SHA;
 if (!LIVE && process.env.CI) throw new Error('LIVE_URL is required in CI (repo variable SITE_URL)');
 if (LIVE && process.env.CI && !EXPECTED_SHA) throw new Error('EXPECTED_SHA is required in CI (the deployed commit)');
 test.skip(!LIVE, 'LIVE_URL not set (post-deploy smoke test only)');
-test.describe.configure({ mode: 'serial' });
+// retries: 0 so the marker's wait is the whole budget (a CI retry would repeat the 6-minute wait and pass a slow edge as flaky).
+test.describe.configure({ mode: 'serial', retries: 0 });
 const HEADERS = securityHeaders();
 const PAGES = sitePages();
 
@@ -24,14 +25,20 @@ function expectSecurityHeaders(h: Record<string, string>, where: string) {
 test('the live site serves the deployed commit (/version.txt)', async ({ request }) => {
   test.skip(!EXPECTED_SHA, 'EXPECTED_SHA not set: smoke-testing whatever version is live');
   test.setTimeout(7 * 60_000);
-  // The deploy has invalidated /*; edges pick it up within minutes. Poll with a cache-busting query string.
+  // Deliberately through the edge cache (no cache-busting: the cache policy ignores query strings anyway), so this
+  // proves what visitors get. The deploy invalidated /*; at worst max-age=300 expires. Network errors are values, not
+  // throws: one ECONNRESET must not end the wait.
+  const marker = async () => {
+    try {
+      const r = await request.get('/version.txt');
+      return `${r.status()} ${(await r.text()).trim().slice(0, 60)}`;
+    } catch (e) {
+      return `error: ${(e as Error).message.split('\n')[0]}`;
+    }
+  };
   await expect
-    .poll(async () => (await request.get(`/version.txt?t=${Date.now()}`)).text().then((t) => t.trim()), {
-      message: `the live site should serve ${EXPECTED_SHA}`,
-      timeout: 6 * 60_000,
-      intervals: [5_000, 10_000, 15_000],
-    })
-    .toBe(EXPECTED_SHA);
+    .poll(marker, { message: `the live site should serve ${EXPECTED_SHA}`, timeout: 6 * 60_000, intervals: [5_000, 10_000, 15_000] })
+    .toBe(`200 ${EXPECTED_SHA}`);
 });
 
 test('every page loads in the browser under the live CSP: 200, security headers, no console/CSP errors', async ({ page }) => {
