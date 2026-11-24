@@ -5,6 +5,7 @@ import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, extname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LEGAL, LINKS, isSet } from '../src/consts.ts';
+import { checkMarker } from '../src/lib/build-marker.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // CHECK_SITE_DIST overrides the build dir for the script's own tests only; ignored in CI so the gate always checks dist/.
@@ -56,13 +57,11 @@ if (!existsSync(dist)) {
   }
 }
 
-// The build marker (#18): present, a full SHA or "dev", and the commit being built when BUILD_SHA is set.
+// The build marker (#18): rules in src/lib/build-marker.ts (unit-tested there).
 if (existsSync(dist)) {
   const vf = join(dist, 'version.txt');
-  const v = existsSync(vf) ? readFileSync(vf, 'utf8') : null;
-  if (v === null) errors.push('build marker /version.txt is missing (src/pages/version.txt.ts)');
-  else if (!/^([0-9a-f]{40}|dev)\n$/.test(v)) errors.push(`build marker /version.txt is malformed: ${JSON.stringify(v.slice(0, 60))}`);
-  else if (process.env.BUILD_SHA && v.trim() !== process.env.BUILD_SHA) errors.push(`build marker is ${v.trim()}, but BUILD_SHA is ${process.env.BUILD_SHA}`);
+  const content = existsSync(vf) && lstatSync(vf).isFile() ? readFileSync(vf, 'utf8') : null;
+  errors.push(...checkMarker(content, process.env.BUILD_SHA, Boolean(process.env.CI)));
 }
 
 if (mode === 'launch') {

@@ -76,10 +76,15 @@ describe('check-site dist gate', () => {
     expect(r.code).toBe(1);
     expect(r.err).toContain('build marker /version.txt is missing');
   });
-  it.each(['', 'dev', 'abc\n', `${'a'.repeat(40)}`, `${'A'.repeat(40)}\n`])('rejects a malformed marker %j', (v) => {
+  it.each(['', '\n', 'dev', 'xdev\n', 'abc\n', `${'a'.repeat(40)}`, `${'a'.repeat(41)}\n`, `${'A'.repeat(40)}\n`])('rejects a malformed marker %j', (v) => {
     const r = run(fixture({ 'index.html': 'ok', 'version.txt': v }));
     expect(r.code).toBe(1);
     expect(r.err).toContain('build marker /version.txt is malformed');
+  });
+  it('rejects a directory named version.txt with a clear message', () => {
+    const r = run(fixture({ 'index.html': 'ok', 'version.txt': undefined, 'version.txt/x.html': 'ok' }));
+    expect(r.code).toBe(1);
+    expect(r.err).toContain('missing or not a file');
   });
   it('requires the marker to equal BUILD_SHA when it is set', () => {
     const sha = 'a'.repeat(40);
