@@ -42,6 +42,7 @@ jobs:
   lighthouse:
     # Lighthouse CI budgets (median of 3 runs): performance, accessibility, best practices, SEO >= 0.95 on 9 pages,
     # mobile and desktop in parallel. lhci has its own locked, audited package (tools/lighthouse).
+    name: lighthouse-${{ matrix.preset }}   # check names without spaces (required checks: lighthouse-mobile, lighthouse-desktop)
     needs: site
     runs-on: ubuntu-latest
     timeout-minutes: 20
