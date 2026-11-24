@@ -41,18 +41,27 @@ Changing these files deploys nothing by itself: the change ships when the ops re
 merged `main` (a ticket there, recorded in its runbook). The script tests a new function on CloudFront's DEVELOPMENT
 stage before publishing it.
 
-Pushes to `main` deploy the site via the repo variables `AWS_DEPLOY_ROLE_ARN`, `SITE_BUCKET`, `DISTRIBUTION_ID` and `SITE_URL`, in this order:
+The deploy ships **exactly the build CI tested**: when CI succeeds on a push to `main`, the `Deploy site` workflow takes
+that run's `dist` artifact (no rebuild), checks with `check:dist` that its `/version.txt` is this commit, and uploads it
+via the repo variables `AWS_DEPLOY_ROLE_ARN`, `SITE_BUCKET`, `DISTRIBUTION_ID` and `SITE_URL`, in this order:
 1. Upload hashed `_astro/*` assets with a 1-year immutable cache.
 2. Upload everything else with a 5-minute cache.
 3. Invalidate CloudFront.
 4. Prune files that were removed from the build. Old hashed assets are kept, so cached pages keep working.
 
+`scripts/resolve-deploy.ts` decides what to ship: always `main`'s current HEAD, never an older commit. If CI runs
+finish out of order (or an old one is re-run), the run that gets to deploy ships HEAD's green build, or skips if HEAD's
+CI hasn't passed yet (its completion deploys it). A manual run (`workflow_dispatch`) ships the green CI run of `main`'s
+current HEAD; if CI hasn't passed for it yet, or its artifact has expired (7 days), re-run CI first.
+
 Every build writes the commit it was built from to `/version.txt` (`BUILD_SHA`; `dev` locally). Then the `smoke` job
 waits (up to 6 minutes) until the live site serves this commit's `/version.txt`, and runs `e2e/live.spec.ts` against
 `SITE_URL` (the distribution domain until the launch cutover, then `https://iorgadragos.ro`); it fails if `SITE_URL` is
-missing. If it fails, the new version is already live: fix forward,
-or revert the commit on `main`, which redeploys the previous version under a new commit (the smoke test then waits for
-that commit). Re-running an older deploy run redeploys that run's commit and leaves the site behind `main`.
+missing. If it fails, the new version is already live: fix forward, or revert the commit on `main`. **A rollback is
+gated on CI too**: the revert ships only after its CI run passes (about 8–10 minutes, both Lighthouse jobs included),
+then the deploy and smoke (about 3 minutes). If CI is red for an unrelated reason (e.g. a Lighthouse score drifting
+with a runner image update), fix or relax that check in the same revert PR; a break-glass deploy of an older green
+build is tracked in #23. Re-running an old deploy run ships `main`'s HEAD (if green), never that run's older commit.
 
 **Rollback:** revert the commit on `main`, which redeploys. Previous object versions also stay in the bucket for 30 days.
 

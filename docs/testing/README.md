@@ -22,8 +22,11 @@ Notes:
   version is printed in the job), so they can drift with runner image updates.
 - Locally, Lighthouse needs Chrome: `CHROME_PATH` can point at Playwright's "Google Chrome for Testing". Reports go to
   `lighthouse-reports/<preset>/` (uploaded as CI artifacts).
-- Not covered yet: blog post pages (the only post is a draft, so none is built) and the deployed build being exactly
-  the CI-tested one (#16, #17); the smoke test proving the new version is live (#18).
+- `src/lib/resolve-deploy.test.ts` uses a stub `gh` that needs `jq` on PATH (preinstalled on GitHub's Ubuntu runners;
+  `brew install jq` locally).
+- The deploy ships the CI-tested `dist` artifact itself (#17), so e2e, axe and Lighthouse results apply to exactly what
+  goes live; the smoke test then proves that commit is the one served (#18).
+- Not covered yet: blog post pages (the only post is a draft, so none is built; #16).
 - **Pinned overrides, to revisit** (Dependabot doesn't move them): `package.json` pins `axe-core` 4.14.0 (remove once
   `@axe-core/playwright`'s own axe-core is at least 2 weeks old) and `playwright-core` 1.65.0 (must equal
   `@playwright/test`'s version; Dependabot's single `all` group bumps both together). `tools/lighthouse` pins `basic-ftp`

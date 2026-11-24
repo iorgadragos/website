@@ -3,6 +3,8 @@
 All notable changes to iorgadragos.ro. Dates are ISO (YYYY-MM-DD); the site is versioned by deploys of `main`.
 
 ## Unreleased
+- Deploy ships the CI-tested `dist` artifact (after CI succeeds on `main`, via `workflow_run`) instead of rebuilding,
+  and only if that commit is still `main`'s HEAD (`scripts/resolve-deploy.ts`, #17).
 - `/version.txt` build marker (the commit SHA); the post-deploy smoke test waits until the live site serves the
   deployed commit before testing it (#18).
 - CI: `npm run check:edge` checks the CloudFront Function as published (rendered like the infra script, a top-level
