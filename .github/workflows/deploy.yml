@@ -2,6 +2,9 @@ name: Deploy site
 # Uploads the built site to S3 and invalidates CloudFront.
 # Infrastructure is NOT deployed from this repo: it's managed with AWS CLI scripts + a RUNBOOK in the studio ops repo (ADR 0011). No CDK.
 # Enabled by repo variables AWS_DEPLOY_ROLE_ARN, SITE_BUCKET, DISTRIBUTION_ID (values recorded in the ops RUNBOOK).
+# After the upload, `smoke` runs e2e/live.spec.ts against SITE_URL (the distribution domain until the launch cutover,
+# then https://iorgadragos.ro): every page under the live CSP, security headers, the rewrite, 404, cache headers.
+# If smoke fails, the new version is already live: fix forward, or revert the commit on main (that redeploys).
 on:
   push:
     branches: [main]
@@ -36,3 +39,18 @@ jobs:
       # keeps working; they are cheap and expire as noncurrent versions once overwritten/removed manually.
       - name: Prune files removed from the build (previous versions stay in the versioned bucket for 30 days)
         run: aws s3 sync dist "s3://${{ vars.SITE_BUCKET }}" --delete --size-only --exclude "_astro/*" --exclude ".DS_Store" --exclude "Thumbs.db" --exclude "desktop.ini"
+  smoke:
+    # Fails (does not skip) when SITE_URL is missing: a deploy without its smoke test must not look green.
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with: { node-version: 24, cache: npm }
+      - run: npm ci && npm run build   # the page list comes from the build's sitemap
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:live -- --project=desktop-chromium
+        env: { LIVE_URL: "${{ vars.SITE_URL }}" }

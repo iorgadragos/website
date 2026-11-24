@@ -13,7 +13,12 @@
     "test": "vitest run",
     "astro": "astro",
     "check:dist": "node scripts/check-site.ts dist",
-    "check:launch": "node scripts/check-site.ts launch"
+    "check:launch": "node scripts/check-site.ts launch",
+    "test:e2e": "playwright test e2e/site.spec.ts",
+    "test:live": "playwright test e2e/live.spec.ts",
+    "lighthouse": "npm run lighthouse:mobile; m=$?; npm run lighthouse:desktop; d=$?; exit $((m || d))",
+    "lighthouse:mobile": "npm --prefix tools/lighthouse run lhci -- autorun --config=../../lighthouserc.json",
+    "lighthouse:desktop": "npm --prefix tools/lighthouse run lhci -- autorun --config=../../lighthouserc.desktop.json"
   },
   "dependencies": {
     "@astrojs/mdx": "^8.1.6",
@@ -23,8 +28,14 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.65.0",
+    "playwright-core": "1.65.0",
     "typescript": "^6.0.3",
     "vitest": "^5.1.1"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "axe-core": "4.14.0"
+  }
 }

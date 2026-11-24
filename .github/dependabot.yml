@@ -3,8 +3,15 @@ updates:
   - package-ecosystem: npm
     directory: /
     schedule: { interval: weekly }
+    cooldown: { default-days: 14 }   # releases at least 2 weeks old, like manual updates
     groups: { all: { patterns: ['*'] } }
     ignore:
       # @astrojs/check peers on typescript ^5 || ^6; revisit when it supports 7
       - { dependency-name: typescript, update-types: ['version-update:semver-major'] }
+  # Lighthouse CI lives in its own locked package (its dependency chain is kept out of the site's lockfile)
+  - package-ecosystem: npm
+    directory: /tools/lighthouse
+    schedule: { interval: weekly }
+    cooldown: { default-days: 14 }
+    groups: { all: { patterns: ['*'] } }
   - { package-ecosystem: github-actions, directory: /, schedule: { interval: monthly } }
