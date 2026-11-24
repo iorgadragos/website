@@ -6,8 +6,13 @@ import { sitePages, securityHeaders } from './pages';
 // loading in a browser under the real CSP with no errors, the CloudFront Function's pretty-URL rewrite, the
 // 403/404 → /404.html mapping, and cache headers. Locally it is skipped unless LIVE_URL is set; in CI it FAILS without it.
 const LIVE = process.env.LIVE_URL;
+// EXPECTED_SHA: the commit just deployed. The first test waits until the edge serves it, so nothing below can pass
+// against the previous version (#18). Serial mode: if it never arrives, the rest are skipped and the run fails.
+const EXPECTED_SHA = process.env.EXPECTED_SHA;
 if (!LIVE && process.env.CI) throw new Error('LIVE_URL is required in CI (repo variable SITE_URL)');
+if (LIVE && process.env.CI && !EXPECTED_SHA) throw new Error('EXPECTED_SHA is required in CI (the deployed commit)');
 test.skip(!LIVE, 'LIVE_URL not set (post-deploy smoke test only)');
+test.describe.configure({ mode: 'serial' });
 const HEADERS = securityHeaders();
 const PAGES = sitePages();
 
@@ -15,6 +20,19 @@ function expectSecurityHeaders(h: Record<string, string>, where: string) {
   for (const [name, value] of Object.entries(HEADERS)) expect(h[name], `${name} on ${where}`).toBe(value);
   expect(h['x-xss-protection'], `x-xss-protection on ${where} (not set by design)`).toBeUndefined();
 }
+
+test('the live site serves the deployed commit (/version.txt)', async ({ request }) => {
+  test.skip(!EXPECTED_SHA, 'EXPECTED_SHA not set: smoke-testing whatever version is live');
+  test.setTimeout(7 * 60_000);
+  // The deploy has invalidated /*; edges pick it up within minutes. Poll with a cache-busting query string.
+  await expect
+    .poll(async () => (await request.get(`/version.txt?t=${Date.now()}`)).text().then((t) => t.trim()), {
+      message: `the live site should serve ${EXPECTED_SHA}`,
+      timeout: 6 * 60_000,
+      intervals: [5_000, 10_000, 15_000],
+    })
+    .toBe(EXPECTED_SHA);
+});
 
 test('every page loads in the browser under the live CSP: 200, security headers, no console/CSP errors', async ({ page }) => {
   const problems: string[] = [];
