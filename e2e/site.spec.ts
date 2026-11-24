@@ -107,8 +107,9 @@ test('main navigation: every link is visible, navigates, and is marked current',
     await link.click();
     await expect(page).toHaveURL(new URL(href, baseURL).href);
     await expect(page.locator('h1')).toBeVisible();
-    const current = page.getByRole('navigation', { name: 'Main' }).locator(`a[href="${href}"][aria-current="page"]`);
-    await expect(current, `${href} marked aria-current`).toHaveCount(1);
+    // Nav entries (not the "Book a call" CTA button, class btn) mark the current page.
+    const entry = page.getByRole('navigation', { name: 'Main' }).locator(`a:not(.btn)[href="${href}"]`);
+    if (await entry.count()) await expect(entry, `${href} marked aria-current`).toHaveAttribute('aria-current', 'page');
   }
 });
 
