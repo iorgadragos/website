@@ -41,18 +41,24 @@ Changing these files deploys nothing by itself: the change ships when the ops re
 merged `main` (a ticket there, recorded in its runbook). The script tests a new function on CloudFront's DEVELOPMENT
 stage before publishing it.
 
-Pushes to `main` deploy the site via the repo variables `AWS_DEPLOY_ROLE_ARN`, `SITE_BUCKET`, `DISTRIBUTION_ID` and `SITE_URL`, in this order:
+The deploy ships **exactly the build CI tested**: when CI succeeds on a push to `main`, the `Deploy site` workflow takes
+that run's `dist` artifact (no rebuild), checks with `check:dist` that its `/version.txt` is this commit, and uploads it
+via the repo variables `AWS_DEPLOY_ROLE_ARN`, `SITE_BUCKET`, `DISTRIBUTION_ID` and `SITE_URL`, in this order:
 1. Upload hashed `_astro/*` assets with a 1-year immutable cache.
 2. Upload everything else with a 5-minute cache.
 3. Invalidate CloudFront.
 4. Prune files that were removed from the build. Old hashed assets are kept, so cached pages keep working.
 
+`scripts/resolve-deploy.ts` decides what to ship. It deploys only if that commit is still `main`'s HEAD, so an older
+run finishing late never rolls the site back. A manual run (`workflow_dispatch`) ships the green CI run of `main`'s
+current HEAD; if CI hasn't passed for it yet, or its artifact has expired (7 days), re-run CI first.
+
 Every build writes the commit it was built from to `/version.txt` (`BUILD_SHA`; `dev` locally). Then the `smoke` job
 waits (up to 6 minutes) until the live site serves this commit's `/version.txt`, and runs `e2e/live.spec.ts` against
 `SITE_URL` (the distribution domain until the launch cutover, then `https://iorgadragos.ro`); it fails if `SITE_URL` is
-missing. If it fails, the new version is already live: fix forward,
-or revert the commit on `main`, which redeploys the previous version under a new commit (the smoke test then waits for
-that commit). Re-running an older deploy run redeploys that run's commit and leaves the site behind `main`.
+missing. If it fails, the new version is already live: fix forward, or revert the commit on `main` (its CI run, then
+the deploy, ship the previous content under the new commit). Re-running an old deploy run ships nothing: that commit is
+no longer `main`'s HEAD.
 
 **Rollback:** revert the commit on `main`, which redeploys. Previous object versions also stay in the bucket for 30 days.
 
