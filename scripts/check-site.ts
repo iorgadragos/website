@@ -5,6 +5,7 @@ import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, extname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LEGAL, LINKS, isSet } from '../src/consts.ts';
+import { checkMarker } from '../src/lib/build-marker.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // CHECK_SITE_DIST overrides the build dir for the script's own tests only; ignored in CI so the gate always checks dist/.
@@ -54,6 +55,13 @@ if (!existsSync(dist)) {
     if (!FILE_EXT.test(rel)) errors.push(`file type not in the CloudFront Function allowlist (would 404): /${rel} (${extname(rel) || 'no extension'})`);
     if (/\.(html|xml)$/.test(rel) && readFileSync(p, 'utf8').includes('TODO')) errors.push(`placeholder leaked into /${rel}`);
   }
+}
+
+// The build marker (#18): rules in src/lib/build-marker.ts (unit-tested there).
+if (existsSync(dist)) {
+  const vf = join(dist, 'version.txt');
+  const content = existsSync(vf) && lstatSync(vf).isFile() ? readFileSync(vf, 'utf8') : null;
+  errors.push(...checkMarker(content, process.env.BUILD_SHA, Boolean(process.env.CI)));
 }
 
 if (mode === 'launch') {

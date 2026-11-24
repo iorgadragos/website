@@ -3,7 +3,8 @@ name: Deploy site
 # Infrastructure is NOT deployed from this repo: it's managed with AWS CLI scripts + a RUNBOOK in the studio ops repo (ADR 0011). No CDK.
 # Enabled by repo variables AWS_DEPLOY_ROLE_ARN, SITE_BUCKET, DISTRIBUTION_ID (values recorded in the ops RUNBOOK).
 # After the upload, `smoke` runs e2e/live.spec.ts against SITE_URL (the distribution domain until the launch cutover,
-# then https://iorgadragos.ro): every page under the live CSP, security headers, the rewrite, 404, cache headers.
+# then https://iorgadragos.ro). It first waits until /version.txt serves this commit (so it never tests the previous
+# version), then: every page under the live CSP, security headers, the rewrite, 404, cache headers.
 # If smoke fails, the new version is already live: fix forward, or revert the commit on main (that redeploys).
 on:
   push:
@@ -23,6 +24,7 @@ jobs:
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with: { node-version: 24, cache: npm }
       - run: npm ci && npm test && npm run build && npm run check:dist
+        env: { BUILD_SHA: "${{ github.sha }}" }   # served as /version.txt (checked by check:dist), polled by smoke (#18)
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
@@ -43,7 +45,7 @@ jobs:
     # Fails (does not skip) when SITE_URL is missing: a deploy without its smoke test must not look green.
     needs: deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15   # incl. up to 6 min waiting for the new version at the edge
     permissions:
       contents: read
     steps:
@@ -53,4 +55,4 @@ jobs:
       - run: npm ci && npm run build   # the page list comes from the build's sitemap
       - run: npx playwright install --with-deps chromium
       - run: npm run test:live -- --project=desktop-chromium
-        env: { LIVE_URL: "${{ vars.SITE_URL }}" }
+        env: { LIVE_URL: "${{ vars.SITE_URL }}", EXPECTED_SHA: "${{ github.sha }}" }

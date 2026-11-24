@@ -3,6 +3,8 @@
 All notable changes to iorgadragos.ro. Dates are ISO (YYYY-MM-DD); the site is versioned by deploys of `main`.
 
 ## Unreleased
+- `/version.txt` build marker (the commit SHA); the post-deploy smoke test waits until the live site serves the
+  deployed commit before testing it (#18).
 - CI: `npm run check:edge` checks the CloudFront Function as published (rendered like the infra script, a top-level
   `handler(event)`, parses as a classic script, at most 10240 bytes). README and CLAUDE.md describe the retired stacks
   and the `03-website.sh` path (#14).

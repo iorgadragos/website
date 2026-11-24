@@ -47,9 +47,12 @@ Pushes to `main` deploy the site via the repo variables `AWS_DEPLOY_ROLE_ARN`, `
 3. Invalidate CloudFront.
 4. Prune files that were removed from the build. Old hashed assets are kept, so cached pages keep working.
 
-Then the `smoke` job runs `e2e/live.spec.ts` against `SITE_URL` (the distribution domain until the launch cutover, then
-`https://iorgadragos.ro`); it fails if `SITE_URL` is missing. If it fails, the new version is already live: fix forward,
-or revert the commit on `main`, which redeploys the previous version.
+Every build writes the commit it was built from to `/version.txt` (`BUILD_SHA`; `dev` locally). Then the `smoke` job
+waits (up to 6 minutes) until the live site serves this commit's `/version.txt`, and runs `e2e/live.spec.ts` against
+`SITE_URL` (the distribution domain until the launch cutover, then `https://iorgadragos.ro`); it fails if `SITE_URL` is
+missing. If it fails, the new version is already live: fix forward,
+or revert the commit on `main`, which redeploys the previous version under a new commit (the smoke test then waits for
+that commit). Re-running an older deploy run redeploys that run's commit and leaves the site behind `main`.
 
 **Rollback:** revert the commit on `main`, which redeploys. Previous object versions also stay in the bucket for 30 days.
 
