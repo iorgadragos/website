@@ -30,4 +30,7 @@ Notes:
   6.2.6 (remove once lhci's chain resolves a patched version by itself). Its lockfile was resolved with
   `npm install --before=<date two weeks ago>` so every transitive package is at least 2 weeks old; do the same on
   manual updates.
-- The CI check names `site`, `e2e`, `lighthouse-mobile` and `lighthouse-desktop` are **required** to merge (set by `scripts/github-rulesets.sh` in iorgadragos/studio). Renaming a job means updating that script in the same change.
+- The CI checks `site`, `e2e`, `lighthouse-mobile` and `lighthouse-desktop` (from GitHub Actions) are **required** to merge,
+  set by `scripts/github-rulesets.sh` in iorgadragos/studio (applied 2026-11-24). Changing a check name (a job id, its
+  `name:`, or a matrix value) needs a matching update to that script, applied right after the website PR merges; until
+  then the old required check never reports and blocks merges (bypass, with Dragos's OK: the `required-checks` ruleset).
