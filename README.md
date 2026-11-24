@@ -16,7 +16,11 @@ npm run dev        # http://localhost:4321
 npm test           # unit tests (vitest)
 npm run build      # astro check + static build → dist/
 npm run check:launch   # launch gate: placeholders filled, build servable
+npx playwright install chromium webkit   # once
+npm run test:e2e   # after build: Playwright on every page (desktop + mobile emulation) + axe
+npm run lighthouse # after build: Lighthouse CI budgets >= 0.95 (mobile + desktop)
 ```
+All test layers, and the exploratory checklist for launches: [`docs/testing/`](docs/testing/README.md).
 Blog posts live in `src/content/blog/*.md(x)`. Set `draft: false` to publish; future-dated posts stay hidden.
 
 ## Infrastructure

@@ -6,3 +6,8 @@ node_modules/
 # CDK is never used (ADR 0011); keep any stray generated output out of the repo
 infra/
 cdk.out/
+
+# test output
+test-results/
+playwright-report/
+.lighthouseci/
