@@ -16,6 +16,7 @@ jobs:
       - name: No CDK/infra code in this repo (ADR 0011)
         run: test ! -e infra && ! git ls-files | grep -E '(^|/)cdk(\.context)?\.(out|json)'
       - run: npm test
+      - run: npm run check:edge   # the CloudFront Function as published: renders, parses, fits 10 KB (#14)
       - run: npm run build # includes astro check
       - run: npm run check:dist
       - run: npm audit --omit=dev --audit-level=high

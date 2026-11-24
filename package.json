@@ -18,7 +18,8 @@
     "test:live": "playwright test e2e/live.spec.ts",
     "lighthouse": "npm run lighthouse:mobile; m=$?; npm run lighthouse:desktop; d=$?; exit $((m || d))",
     "lighthouse:mobile": "npm --prefix tools/lighthouse run lhci -- autorun --config=../../lighthouserc.json",
-    "lighthouse:desktop": "npm --prefix tools/lighthouse run lhci -- autorun --config=../../lighthouserc.desktop.json"
+    "lighthouse:desktop": "npm --prefix tools/lighthouse run lhci -- autorun --config=../../lighthouserc.desktop.json",
+    "check:edge": "node scripts/check-edge.ts"
   },
   "dependencies": {
     "@astrojs/mdx": "^8.1.6",

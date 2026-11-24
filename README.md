@@ -15,6 +15,7 @@ npm ci
 npm run dev        # http://localhost:4321
 npm test           # unit tests (vitest)
 npm run build      # astro check + static build → dist/
+npm run check:edge # the CloudFront Function as published: renders, parses, has handler(), fits 10 KB
 npm run check:launch   # launch gate: placeholders filled, build servable
 npx playwright install chromium webkit   # once
 npm run test:e2e   # after build: Playwright on every page (desktop + mobile emulation) + axe
@@ -26,13 +27,19 @@ Blog posts live in `src/content/blog/*.md(x)`. Set `draft: false` to publish; fu
 ## Infrastructure
 The site runs on private S3 + CloudFront (OAC) with security headers and a strict CSP, in a dedicated AWS account. It deploys from `main` via GitHub Actions with OIDC (no long-lived keys); the deploy role can only sync this bucket and invalidate this distribution.
 
-The infrastructure itself is managed **with the AWS CLI and a documented runbook** in the studio's private ops repo. No CDK, Terraform or CloudFormation templates (the old CloudFormation stacks are being retired).
+The infrastructure itself is managed **with the AWS CLI and a documented runbook** in the studio's private ops repo.
+No CDK, Terraform or CloudFormation: the last of the studio's CloudFormation stacks was retired on 2026-11-24, and the
+site's resources are converged by the ops repo's `03-website.sh` script from its merged `main`.
 
 `edge/` holds what runs at the edge, as reviewed and tested data that the infra scripts apply:
-- `edge/rewrite.js`: the CloudFront Function (pretty URLs, www → apex 301 keeping the query string), unit-tested in `edge/rewrite.test.ts`.
+- `edge/rewrite.js`: the CloudFront Function (pretty URLs, www → apex 301 keeping the query string), unit-tested in
+  `edge/rewrite.test.ts`; `npm run check:edge` (in CI) renders `__DOMAIN__` like the infra script, runs `node --check`
+  and enforces CloudFront's 10 KB limit.
 - `edge/security-headers.json`: HSTS, CSP, frame/referrer/permissions policies, tested in `edge/security-headers.test.ts`.
 
-Changing these files deploys nothing by itself: the change ships when the ops repo's script applies it (and records it in its runbook).
+Changing these files deploys nothing by itself: the change ships when the ops repo's `03-website.sh` applies it from
+merged `main` (a ticket there, recorded in its runbook). The script tests a new function on CloudFront's DEVELOPMENT
+stage before publishing it.
 
 Pushes to `main` deploy the site via the repo variables `AWS_DEPLOY_ROLE_ARN`, `SITE_BUCKET`, `DISTRIBUTION_ID` and `SITE_URL`, in this order:
 1. Upload hashed `_astro/*` assets with a 1-year immutable cache.
