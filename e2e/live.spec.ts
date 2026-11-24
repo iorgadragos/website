@@ -1,45 +1,55 @@
 import { test, expect } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { sitePages, securityHeaders } from './pages';
 
-// Post-deploy smoke test against the LIVE site (deploy workflow: LIVE_URL=https://<distribution domain>).
-// Checks what only the real edge can show: the security headers from edge/security-headers.json, the CloudFront
-// Function's pretty-URL rewrite, the 404 mapping, and cache headers. Skipped unless LIVE_URL is set.
+// Post-deploy smoke test against the LIVE site (deploy job `smoke`: LIVE_URL = repo variable SITE_URL).
+// What only the real edge can show: the CloudFront response-headers policy (every page, incl. the 404), every page
+// loading in a browser under the real CSP with no errors, the CloudFront Function's pretty-URL rewrite, the
+// 403/404 → /404.html mapping, and cache headers. Locally it is skipped unless LIVE_URL is set; in CI it FAILS without it.
 const LIVE = process.env.LIVE_URL;
-const H = JSON.parse(readFileSync('edge/security-headers.json', 'utf8'));
+if (!LIVE && process.env.CI) throw new Error('LIVE_URL is required in CI (repo variable SITE_URL)');
 test.skip(!LIVE, 'LIVE_URL not set (post-deploy smoke test only)');
+const HEADERS = securityHeaders();
+const PAGES = sitePages();
 
-test('home: 200 with every security header at its configured value', async ({ request }) => {
-  const r = await request.get('/');
-  expect(r.status()).toBe(200);
-  const h = r.headers();
-  const hsts = `max-age=${H.strictTransportSecurity.maxAgeSeconds}; includeSubDomains${H.strictTransportSecurity.preload ? '; preload' : ''}`;
-  expect(h['strict-transport-security']).toBe(hsts);
-  expect(h['content-security-policy']).toBe(H.contentSecurityPolicy);
-  expect(h['x-content-type-options']).toBe('nosniff');
-  expect(h['x-frame-options']).toBe(H.frameOptions);
-  expect(h['referrer-policy']).toBe(H.referrerPolicy);
-  for (const [name, value] of Object.entries(H.customHeaders as Record<string, string>)) expect(h[name.toLowerCase()]).toBe(value);
+function expectSecurityHeaders(h: Record<string, string>, where: string) {
+  for (const [name, value] of Object.entries(HEADERS)) expect(h[name], `${name} on ${where}`).toBe(value);
+  expect(h['x-xss-protection'], `x-xss-protection on ${where} (not set by design)`).toBeUndefined();
+}
+
+test('every page loads in the browser under the live CSP: 200, security headers, no console/CSP errors', async ({ page }) => {
+  const problems: string[] = [];
+  page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`); });
+  page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
+  page.on('requestfailed', (r) => problems.push(`failed: ${r.url()} ${r.failure()?.errorText}`));
+  for (const path of PAGES) {
+    const res = await page.goto(path);
+    expect(res?.status(), path).toBe(200);
+    expectSecurityHeaders(res!.headers(), path);
+    await page.waitForLoadState('networkidle');
+  }
+  expect(problems).toEqual([]);
 });
 
-test('pretty URL without a trailing slash is rewritten (CloudFront Function)', async ({ request }) => {
-  const r = await request.get('/about');
-  expect(r.status()).toBe(200);
-  expect(await r.text()).toContain('<h1');
+test('pretty URL without a trailing slash is rewritten to the page (CloudFront Function)', async ({ request }) => {
+  const [rewritten, canonical] = [await request.get('/about'), await request.get('/about/')];
+  expect(rewritten.status()).toBe(200);
+  expect(await rewritten.text()).toBe(await canonical.text());
 });
 
-test('unknown path: 404 status with the site 404 page', async ({ request }) => {
+test('unknown path: status 404, the site 404 page, and the security headers', async ({ request }) => {
   const r = await request.get('/definitely-not-a-page-' + Date.now());
   expect(r.status()).toBe(404);
-  expect(await r.text()).toContain('<h1');
+  expect(await r.text()).toContain('404');
+  expectSecurityHeaders(r.headers(), 'the 404 page');
 });
 
-test('HTML is short-lived; fingerprinted assets (if any) are immutable', async ({ request, page }) => {
-  const html = await request.get('/');
-  expect(html.headers()['cache-control']).toBe('public,max-age=300');
+test('cache headers: HTML and other files short-lived; fingerprinted assets (if any) immutable', async ({ request, page }) => {
+  expect((await request.get('/')).headers()['cache-control']).toBe('public,max-age=300');
+  expect((await request.get('/favicon.svg')).headers()['cache-control']).toBe('public,max-age=300');
   await page.goto('/');
-  // The build currently inlines its CSS, so there may be no /_astro/ asset; check the first one when there is.
+  // The build currently inlines its CSS, so there is usually no /_astro/ asset: the immutable check is then vacuous.
   const assets = await page.locator('link[href^="/_astro/"], script[src^="/_astro/"]').evaluateAll((els) =>
     els.map((el) => (el as HTMLLinkElement).href || (el as HTMLScriptElement).src));
-  test.info().annotations.push({ type: 'assets', description: `${assets.length} fingerprinted asset(s)` });
+  test.info().annotations.push({ type: 'fingerprinted assets', description: String(assets.length) });
   if (assets.length > 0) expect((await request.get(assets[0])).headers()['cache-control']).toBe('public,max-age=31536000,immutable');
 });

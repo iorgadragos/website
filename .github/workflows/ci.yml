@@ -22,10 +22,11 @@ jobs:
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0 (node24)
         with: { name: dist, path: dist, retention-days: 7 }
   e2e:
-    # Playwright on the built site: every page in desktop Chromium/WebKit and Pixel/iPhone emulation, axe (no
-    # serious/critical violations), internal links, nav, 404 (iorgadragos/studio#41).
+    # Playwright on the built site: every page in desktop Chromium/WebKit and Pixel/iPhone emulation, served with the
+    # production security headers (CSP), axe WCAG 2.2 AA in light and dark mode, links, nav, 404 (iorgadragos/studio#41).
     needs: site
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
@@ -34,22 +35,32 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with: { name: dist, path: dist }
       - run: npx playwright install --with-deps chromium webkit
-      - run: npm run test:e2e
+      - run: npm run test:e2e -- --fail-on-flaky-tests
       - if: failure()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0 (node24)
         with: { name: playwright-report, path: playwright-report, retention-days: 7 }
   lighthouse:
-    # Lighthouse CI budgets: performance, accessibility, best practices and SEO >= 0.95, mobile and desktop presets.
-    # Run through a pinned npx (not a devDependency): @lhci/cli's proxy/ftp dependency chain stays out of the lockfile.
+    # Lighthouse CI budgets (median of 3 runs): performance, accessibility, best practices, SEO >= 0.95 on 9 pages,
+    # mobile and desktop in parallel. lhci has its own locked, audited package (tools/lighthouse).
     needs: site
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix: { preset: [mobile, desktop] }
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
-        with: { node-version: 24 }
+        with: { node-version: 24, cache: npm, cache-dependency-path: tools/lighthouse/package-lock.json }
+      - run: npm ci --prefix tools/lighthouse
+      - run: npm audit --prefix tools/lighthouse --audit-level=high
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with: { name: dist, path: dist }
-      - run: npm run lighthouse
+      - run: google-chrome --version   # the runner's Chrome; scores can drift with runner image updates
+      - run: npm run lighthouse:${{ matrix.preset }}
       - if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0 (node24)
-        with: { name: lighthouse, path: .lighthouseci, retention-days: 7 }
+        with:
+          name: lighthouse-${{ matrix.preset }}
+          path: lighthouse-reports/${{ matrix.preset }}
+          retention-days: 7

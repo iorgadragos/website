@@ -16,7 +16,9 @@
     "check:launch": "node scripts/check-site.ts launch",
     "test:e2e": "playwright test e2e/site.spec.ts",
     "test:live": "playwright test e2e/live.spec.ts",
-    "lighthouse": "npx --yes @lhci/cli@0.16.0 autorun && npx --yes @lhci/cli@0.16.0 autorun --config=lighthouserc.desktop.json"
+    "lighthouse": "npm run lighthouse:mobile; m=$?; npm run lighthouse:desktop; d=$?; exit $((m || d))",
+    "lighthouse:mobile": "npm --prefix tools/lighthouse run lhci -- autorun --config=../../lighthouserc.json",
+    "lighthouse:desktop": "npm --prefix tools/lighthouse run lhci -- autorun --config=../../lighthouserc.desktop.json"
   },
   "dependencies": {
     "@astrojs/mdx": "^8.1.6",
@@ -32,5 +34,8 @@
     "typescript": "^6.0.3",
     "vitest": "^5.1.1"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "axe-core": "4.14.0"
+  }
 }

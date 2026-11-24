@@ -11,3 +11,5 @@ cdk.out/
 test-results/
 playwright-report/
 .lighthouseci/
+lighthouse-reports/
+tools/lighthouse/node_modules/

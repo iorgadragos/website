@@ -1,0 +1,8 @@
+{
+  "name": "iorgadragos-website-lighthouse",
+  "private": true,
+  "description": "Lighthouse CI for the website, isolated with its own lockfile (audited in CI, updated by Dependabot).",
+  "scripts": { "lhci": "lhci" },
+  "devDependencies": { "@lhci/cli": "0.16.0" },
+  "overrides": { "basic-ftp": "6.2.6" }
+}

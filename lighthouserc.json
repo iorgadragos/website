@@ -1,14 +1,17 @@
 {
   "ci": {
     "collect": {
-      "staticDistDir": "dist",
+      "staticDistDir": "../../dist",
       "url": [
         "http://localhost/",
         "http://localhost/services/",
         "http://localhost/how-i-work/",
         "http://localhost/about/",
         "http://localhost/book/",
-        "http://localhost/blog/"
+        "http://localhost/blog/",
+        "http://localhost/contact/",
+        "http://localhost/speaking/",
+        "http://localhost/legal/"
       ],
       "numberOfRuns": 3
     },
@@ -17,32 +20,36 @@
         "categories:performance": [
           "error",
           {
-            "minScore": 0.95
+            "minScore": 0.95,
+            "aggregationMethod": "median"
           }
         ],
         "categories:accessibility": [
           "error",
           {
-            "minScore": 0.95
+            "minScore": 0.95,
+            "aggregationMethod": "median"
           }
         ],
         "categories:best-practices": [
           "error",
           {
-            "minScore": 0.95
+            "minScore": 0.95,
+            "aggregationMethod": "median"
           }
         ],
         "categories:seo": [
           "error",
           {
-            "minScore": 0.95
+            "minScore": 0.95,
+            "aggregationMethod": "median"
           }
         ]
       }
     },
     "upload": {
       "target": "filesystem",
-      "outputDir": ".lighthouseci"
+      "outputDir": "../../lighthouse-reports/mobile"
     }
   }
 }
