@@ -10,8 +10,9 @@ const B = 'b'.repeat(40);
 const dirs: string[] = [];
 afterAll(() => dirs.forEach((d) => rmSync(d, { recursive: true, force: true })));
 
-// A stub `gh` on PATH: HEAD = $STUB_HEAD; the CI-runs query answers $STUB_RUN (empty = none); FAIL=1 fails every call.
-// Every call is logged, so tests can assert what was (not) asked.
+// A stub `gh` on PATH that answers real JSON and applies the --jq filter with jq, so the script's filters are exercised:
+// commits/main → {"sha": $STUB_HEAD (JSON value, default the A string)}; the CI-runs query → one run with id $STUB_RUN,
+// or none when it's empty. FAIL=1 fails every call. Every call is logged, so tests can assert what was (not) asked.
 function setup() {
   const dir = mkdtempSync(join(tmpdir(), 'resolve-deploy-'));
   dirs.push(dir);
@@ -20,11 +21,14 @@ function setup() {
     `#!/usr/bin/env bash
 echo "$*" >> "${dir}/log"
 [[ \${FAIL:-0} == 1 ]] && { echo "HTTP 401" >&2; exit 1; }
+[[ $1 == api && $3 == --jq && $# -eq 4 ]] || { echo "unexpected args: $*" >&2; exit 1; }
 case "$2" in
-  repos/*/commits/main) echo "$STUB_HEAD" ;;
-  repos/*/actions/workflows/ci.yml/runs*) echo "$STUB_RUN" ;;
+  repos/*/commits/main) json='{"sha": '"$STUB_HEAD_JSON"'}' ;;
+  repos/*/actions/workflows/ci.yml/runs*)
+    if [[ -n $STUB_RUN ]]; then json='{"workflow_runs": [{"id": '"$STUB_RUN"'}]}'; else json='{"workflow_runs": []}'; fi ;;
   *) echo "unexpected $2" >&2; exit 1 ;;
 esac
+jq -r "$4" <<<"$json"
 `,
   );
   chmodSync(join(dir, 'gh'), 0o755);
@@ -37,9 +41,10 @@ function run(vars: Record<string, string>) {
     PATH: `${dir}:${process.env.PATH}`,
     GITHUB_REPOSITORY: 'iorgadragos/website',
     GITHUB_OUTPUT: join(dir, 'out'),
-    STUB_HEAD: A,
     ...vars,
   };
+  // The stub's HEAD as a JSON value: STUB_HEAD (a string) unless STUB_HEAD_JSON gives raw JSON (e.g. null).
+  env.STUB_HEAD_JSON = vars.STUB_HEAD_JSON ?? JSON.stringify(vars.STUB_HEAD ?? A);
   let code = 0;
   let stdout = '';
   let stderr = '';
@@ -67,6 +72,7 @@ const wr = (over: Record<string, string> = {}) => ({
   WR_EVENT: 'push',
   WR_BRANCH: 'main',
   WR_REPO: 'iorgadragos/website',
+  WR_PATH: '.github/workflows/ci.yml',
   ...over,
 });
 
@@ -82,6 +88,8 @@ describe('resolve-deploy (workflow_run)', () => {
     ['a pull_request run', { WR_EVENT: 'pull_request' }],
     ['another branch', { WR_BRANCH: 'feat/x' }],
     ['a fork', { WR_REPO: 'someone/website' }],
+    ['another workflow named CI', { WR_PATH: '.github/workflows/other.yml' }],
+    ['a missing workflow path', { WR_PATH: '' }],
   ])('skips %s, without any API call', (_, over) => {
     const r = run(wr(over));
     expect(r.code).toBe(0);
@@ -102,6 +110,19 @@ describe('resolve-deploy (workflow_run)', () => {
     expect(r.code).toBe(1);
     expect(r.output.deploy).toBeUndefined();
   });
+  it.each([
+    ['empty', { STUB_HEAD: '' }],
+    ['null', { STUB_HEAD_JSON: 'null' }],
+    ['short', { STUB_HEAD: 'abc' }],
+  ])('fails (never deploys) when main\'s HEAD is %s', (_, over) => {
+    const r = run({ ...wr(), ...over });
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("could not read main's HEAD");
+    expect(r.output.deploy).toBeUndefined();
+  });
+  it('asks GitHub exactly for main\'s HEAD SHA', () => {
+    expect(run(wr()).log).toContain('api repos/iorgadragos/website/commits/main --jq .sha');
+  });
   it('fails (never deploys) when main cannot be read', () => {
     const r = run({ ...wr(), FAIL: '1' });
     expect(r.code).not.toBe(0);
@@ -114,12 +135,21 @@ describe('resolve-deploy (workflow_dispatch)', () => {
     const r = run({ GITHUB_EVENT_NAME: 'workflow_dispatch', STUB_RUN: '456' });
     expect(r.code).toBe(0);
     expect(r.output).toEqual({ deploy: 'true', run_id: '456', sha: A });
-    expect(r.log).toContain(`event=push&status=success&head_sha=${A}`);
+    expect(r.log).toContain(`branch=main&event=push&status=success&head_sha=${A}`);
+    expect(r.log).toContain('--jq .workflow_runs[0].id // empty');
   });
   it('fails when the HEAD has no green CI run yet', () => {
     const r = run({ GITHUB_EVENT_NAME: 'workflow_dispatch', STUB_RUN: '' });
     expect(r.code).toBe(1);
     expect(r.stderr).toContain('no successful CI run');
+  });
+  it.each([
+    ['empty', { STUB_HEAD: '' }],
+    ['null', { STUB_HEAD_JSON: 'null' }],
+  ])('fails when main\'s HEAD is %s', (_, over) => {
+    const r = run({ GITHUB_EVENT_NAME: 'workflow_dispatch', STUB_RUN: '456', ...over });
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain("could not read main's HEAD");
   });
   it('fails when the API is unreachable', () => {
     const r = run({ GITHUB_EVENT_NAME: 'workflow_dispatch', FAIL: '1' });

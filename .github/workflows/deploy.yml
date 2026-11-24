@@ -17,7 +17,13 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-concurrency: { group: deploy, cancel-in-progress: false }
+# One real deploy at a time, queued in order. A run that can't deploy (a failed CI, a PR or fork run whose head branch
+# is also called main, another workflow named CI) gets its own group: GitHub keeps only ONE pending run per group and a
+# newly queued run cancels it, so a no-op must never displace a real pending deploy. resolve-deploy.ts re-checks all of
+# this (and that the commit is still main's HEAD) inside the lock.
+concurrency:
+  group: ${{ (github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.path == '.github/workflows/ci.yml')) && 'deploy' || format('deploy-noop-{0}', github.run_id) }}
+  cancel-in-progress: false
 jobs:
   resolve:
     if: ${{ vars.AWS_DEPLOY_ROLE_ARN != '' }}
@@ -45,6 +51,7 @@ jobs:
           WR_EVENT: ${{ github.event.workflow_run.event }}
           WR_BRANCH: ${{ github.event.workflow_run.head_branch }}
           WR_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+          WR_PATH: ${{ github.event.workflow_run.path }}
   deploy:
     needs: resolve
     if: ${{ needs.resolve.outputs.deploy == 'true' }}

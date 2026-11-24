@@ -56,9 +56,11 @@ current HEAD; if CI hasn't passed for it yet, or its artifact has expired (7 day
 Every build writes the commit it was built from to `/version.txt` (`BUILD_SHA`; `dev` locally). Then the `smoke` job
 waits (up to 6 minutes) until the live site serves this commit's `/version.txt`, and runs `e2e/live.spec.ts` against
 `SITE_URL` (the distribution domain until the launch cutover, then `https://iorgadragos.ro`); it fails if `SITE_URL` is
-missing. If it fails, the new version is already live: fix forward, or revert the commit on `main` (its CI run, then
-the deploy, ship the previous content under the new commit). Re-running an old deploy run ships nothing: that commit is
-no longer `main`'s HEAD.
+missing. If it fails, the new version is already live: fix forward, or revert the commit on `main`. **A rollback is
+gated on CI too**: the revert ships only after its CI run passes (about 8–10 minutes, both Lighthouse jobs included),
+then the deploy and smoke (about 3 minutes). If CI is red for an unrelated reason (e.g. a Lighthouse score drifting
+with a runner image update), fix or relax that check in the same revert PR; a break-glass deploy of an older green
+build is tracked in #23. Re-running an old deploy run ships nothing: that commit is no longer `main`'s HEAD.
 
 **Rollback:** revert the commit on `main`, which redeploys. Previous object versions also stay in the bucket for 30 days.
 

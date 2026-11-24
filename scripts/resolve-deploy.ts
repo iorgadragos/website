@@ -35,7 +35,9 @@ if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) fail(`GITHUB_REPOSITORY is not owner/name:
 let runId: string;
 let sha: string;
 if (env.GITHUB_EVENT_NAME === 'workflow_run') {
-  const { WR_ID = '', WR_SHA = '', WR_CONCLUSION, WR_EVENT, WR_BRANCH, WR_REPO } = env;
+  const { WR_ID = '', WR_SHA = '', WR_CONCLUSION, WR_EVENT, WR_BRANCH, WR_REPO, WR_PATH } = env;
+  // The trigger matches workflows by NAME ("CI"): require the actual CI workflow file too.
+  if (WR_PATH !== '.github/workflows/ci.yml') skip(`the triggering workflow is "${WR_PATH}", not .github/workflows/ci.yml`);
   if (WR_CONCLUSION !== 'success') skip(`CI concluded "${WR_CONCLUSION}"`);
   if (WR_EVENT !== 'push') skip(`CI ran for a "${WR_EVENT}" event, not a push`);
   if (WR_BRANCH !== 'main') skip(`CI ran on "${WR_BRANCH}", not main`);

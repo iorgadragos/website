@@ -24,7 +24,9 @@ jobs:
       - run: npm run check:dist
       - run: npm audit --omit=dev --audit-level=high
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0 (node24)
-        with: { name: dist, path: dist, retention-days: 7 }
+        # include-hidden-files: dist/.well-known/ is allowed (check-site); without this it would be dropped from the
+        # artifact the deploy ships, and the deploy's prune step would then delete it from the bucket.
+        with: { name: dist, path: dist, retention-days: 7, include-hidden-files: true }
   e2e:
     # Playwright on the built site: every page in desktop Chromium/WebKit and Pixel/iPhone emulation, served with the
     # production security headers (CSP), axe WCAG 2.2 AA in light and dark mode, links, nav, 404 (iorgadragos/studio#41).
