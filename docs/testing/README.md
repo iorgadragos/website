@@ -3,7 +3,7 @@
 | Layer | Command | Runs in | What it proves |
 |---|---|---|---|
 | Unit | `npm test` (vitest) | CI `site` | `src/` helpers, `edge/rewrite.js` (the CloudFront Function), `edge/security-headers.json` |
-| Build checks | `npm run build && npm run check:dist` | CI `site` | `astro check`, the built output's own checks |
+| Build checks | `npm run check:edge`, `npm run build && npm run check:dist` | CI `site` | the CloudFront Function as published (`__DOMAIN__` rendered, no other placeholder, a top-level `handler(event)`, parses as a classic script, ≤ 10240 bytes); `astro check`; the built output's own checks, incl. the `/version.txt` build marker (a SHA, equal to `BUILD_SHA`; `dev` only outside CI) |
 | End-to-end | `npm run build && npm run test:e2e` (Playwright) | CI `e2e` | every page (sitemap + built blog posts; the 9 core pages must exist) in desktop Chromium, desktop WebKit, Pixel 7 and iPhone 14 emulation, **served with the production security headers incl. the CSP**: 200, one h1, a title, no console or CSP errors, no failed or 4xx/5xx requests, no horizontal scroll; the main nav (visible, navigates, `aria-current`); skip link. Once (desktop Chromium): every same-origin link and resource resolves; the preview server's 404; robots, sitemap and RSS |
 | Accessibility | part of `test:e2e` (axe-core) | CI `e2e` | no **serious or critical** WCAG 2.2 A/AA violations on any page, in **light and dark** mode |
 | Performance, SEO | `npm run build && npm run lighthouse` (Lighthouse CI) | CI `lighthouse-mobile`, `lighthouse-desktop` (parallel) | performance, accessibility, best practices and SEO ≥ 0.95 on all 9 core pages, the **median** of 3 runs, mobile and desktop presets |

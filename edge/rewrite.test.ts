@@ -25,7 +25,7 @@ describe('viewer-request rewrite', () => {
     expect(handler(ev(uri)).uri).toBe(expected);
   });
 
-  it('treats a path ending in a real file extension as a file (so slugs must not end in one; see src/lib/slugs.test.ts)', () => {
+  it('treats a path ending in a real file extension as a file (so slugs must not end in one; see the file-like page URL gate in scripts/check-site.ts, tested in src/lib/check-site.test.ts)', () => {
     expect(handler(ev('/blog/what-is-next.js')).uri).toBe('/blog/what-is-next.js');
   });
 
