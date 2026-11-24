@@ -109,6 +109,12 @@ describe('resolve-deploy (workflow_run)', () => {
     expect(r.output).toEqual({ deploy: 'true', run_id: '789', sha: B });
     expect(r.log).not.toContain(`head_sha=${A}`); // never looks for (or ships) the older commit's build
   });
+  it('an older commit, HEAD\'s run id malformed: fails, never deploys', () => {
+    const r = run({ ...wr(), STUB_HEAD: B, STUB_RUN: '"12;rm"' });
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain('bad CI run id');
+    expect(r.output.deploy).toBeUndefined();
+  });
   it.each([
     ['a bad run id', { WR_ID: '12;rm' }],
     ['a short SHA', { WR_SHA: 'abc1234' }],
