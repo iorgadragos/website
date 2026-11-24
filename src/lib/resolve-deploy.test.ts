@@ -96,11 +96,18 @@ describe('resolve-deploy (workflow_run)', () => {
     expect(r.output.deploy).toBe('false');
     expect(r.log).toBe('');
   });
-  it('skips an older commit when main has moved on (never rolls back)', () => {
-    const r = run({ ...wr(), STUB_HEAD: B });
+  it('an older commit, HEAD not green yet: skips (never rolls back; HEAD\'s completion deploys it)', () => {
+    const r = run({ ...wr(), STUB_HEAD: B, STUB_RUN: '' });
     expect(r.code).toBe(0);
     expect(r.output).toEqual({ deploy: 'false', run_id: '', sha: '' });
-    expect(r.stdout).toContain('main moved on');
+    expect(r.stdout).toContain("its CI hasn't passed yet");
+    expect(r.log).toContain(`head_sha=${B}`);
+  });
+  it('an older commit, HEAD already green: ships HEAD\'s build (a cancelled pending run loses nothing)', () => {
+    const r = run({ ...wr(), STUB_HEAD: B, STUB_RUN: '789' });
+    expect(r.code).toBe(0);
+    expect(r.output).toEqual({ deploy: 'true', run_id: '789', sha: B });
+    expect(r.log).not.toContain(`head_sha=${A}`); // never looks for (or ships) the older commit's build
   });
   it.each([
     ['a bad run id', { WR_ID: '12;rm' }],

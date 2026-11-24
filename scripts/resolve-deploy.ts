@@ -2,8 +2,10 @@
 // The deploy never rebuilds, so the site that goes live is exactly the build CI's e2e, axe and Lighthouse jobs tested.
 //   workflow_run (CI completed): that run, if it was a successful `push` to main of this repo.
 //   workflow_dispatch:           the latest successful CI push run for main's current HEAD (fails if there is none).
-// Either way it deploys only if that commit is still main's HEAD: an older run finishing late (or a re-run of an old
-// deploy) must never roll the site back; the newer commit's own CI run deploys it.
+// Either way it ships only main's CURRENT HEAD, never an older commit (no rollback). If the triggering run is for an
+// older commit (CI runs finished out of order, or an old run was re-run), it ships HEAD's green CI build instead, when
+// there is one: GitHub keeps one pending run per concurrency group and a newly queued run cancels it, so the run holding
+// the lock must not assume HEAD's own run will still come. If HEAD has no green run yet, its completion deploys it.
 // Writes `deploy`, `run_id` and `sha` to $GITHUB_OUTPUT. Needs `gh` with GH_TOKEN (actions: read, contents: read).
 // Run with Node >= 24: node scripts/resolve-deploy.ts
 import { execFileSync } from 'node:child_process';
@@ -15,6 +17,13 @@ const gh = (path: string, jq: string): string =>
   execFileSync('gh', ['api', path, '--jq', jq], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] }).trim();
 const SHA = /^[0-9a-f]{40}$/;
 const ID = /^[0-9]+$/;
+
+// The latest successful CI push run of `sha` on main, or '' if there is none.
+const greenRun = (sha: string) =>
+  gh(
+    `repos/${repo}/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&head_sha=${sha}&per_page=1`,
+    '.workflow_runs[0].id // empty',
+  );
 
 function out(deploy: boolean, runId = '', sha = '') {
   const lines = `deploy=${deploy}\nrun_id=${runId}\nsha=${sha}\n`;
@@ -47,10 +56,7 @@ if (env.GITHUB_EVENT_NAME === 'workflow_run') {
 } else if (env.GITHUB_EVENT_NAME === 'workflow_dispatch') {
   sha = gh(`repos/${repo}/commits/main`, '.sha');
   if (!SHA.test(sha)) fail(`could not read main's HEAD (got "${sha}")`);
-  runId = gh(
-    `repos/${repo}/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&head_sha=${sha}&per_page=1`,
-    '.workflow_runs[0].id // empty',
-  );
+  runId = greenRun(sha);
   if (!runId) fail(`no successful CI run for main@${sha.slice(0, 7)} yet: wait for CI (or re-run it), then dispatch again`);
 } else {
   fail(`unexpected event "${env.GITHUB_EVENT_NAME}"`);
@@ -59,6 +65,13 @@ if (!ID.test(runId)) fail(`bad CI run id "${runId}"`);
 if (!SHA.test(sha)) fail(`bad commit SHA "${sha}"`);
 const head = gh(`repos/${repo}/commits/main`, '.sha');
 if (!SHA.test(head)) fail(`could not read main's HEAD (got "${head}")`);
-if (head !== sha) skip(`main moved on to ${head.slice(0, 7)} (this is ${sha.slice(0, 7)}); its own CI run deploys it`);
+if (head !== sha) {
+  const headRun = greenRun(head);
+  if (!headRun) skip(`main moved on to ${head.slice(0, 7)} (this is ${sha.slice(0, 7)}) and its CI hasn't passed yet: its completion deploys it`);
+  console.log(`main moved on to ${head.slice(0, 7)} (this run is for ${sha.slice(0, 7)}): shipping HEAD's green CI run ${headRun}`);
+  runId = headRun;
+  sha = head;
+  if (!ID.test(runId)) fail(`bad CI run id "${runId}"`);
+}
 console.log(`deploying main@${sha.slice(0, 7)}: the dist artifact of CI run ${runId}`);
 out(true, runId, sha);

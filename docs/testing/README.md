@@ -22,6 +22,8 @@ Notes:
   version is printed in the job), so they can drift with runner image updates.
 - Locally, Lighthouse needs Chrome: `CHROME_PATH` can point at Playwright's "Google Chrome for Testing". Reports go to
   `lighthouse-reports/<preset>/` (uploaded as CI artifacts).
+- `src/lib/resolve-deploy.test.ts` uses a stub `gh` that needs `jq` on PATH (preinstalled on GitHub's Ubuntu runners;
+  `brew install jq` locally).
 - The deploy ships the CI-tested `dist` artifact itself (#17), so e2e, axe and Lighthouse results apply to exactly what
   goes live; the smoke test then proves that commit is the one served (#18).
 - Not covered yet: blog post pages (the only post is a draft, so none is built; #16).

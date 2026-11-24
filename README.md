@@ -49,8 +49,9 @@ via the repo variables `AWS_DEPLOY_ROLE_ARN`, `SITE_BUCKET`, `DISTRIBUTION_ID` a
 3. Invalidate CloudFront.
 4. Prune files that were removed from the build. Old hashed assets are kept, so cached pages keep working.
 
-`scripts/resolve-deploy.ts` decides what to ship. It deploys only if that commit is still `main`'s HEAD, so an older
-run finishing late never rolls the site back. A manual run (`workflow_dispatch`) ships the green CI run of `main`'s
+`scripts/resolve-deploy.ts` decides what to ship: always `main`'s current HEAD, never an older commit. If CI runs
+finish out of order (or an old one is re-run), the run that gets to deploy ships HEAD's green build, or skips if HEAD's
+CI hasn't passed yet (its completion deploys it). A manual run (`workflow_dispatch`) ships the green CI run of `main`'s
 current HEAD; if CI hasn't passed for it yet, or its artifact has expired (7 days), re-run CI first.
 
 Every build writes the commit it was built from to `/version.txt` (`BUILD_SHA`; `dev` locally). Then the `smoke` job
@@ -60,7 +61,7 @@ missing. If it fails, the new version is already live: fix forward, or revert th
 gated on CI too**: the revert ships only after its CI run passes (about 8–10 minutes, both Lighthouse jobs included),
 then the deploy and smoke (about 3 minutes). If CI is red for an unrelated reason (e.g. a Lighthouse score drifting
 with a runner image update), fix or relax that check in the same revert PR; a break-glass deploy of an older green
-build is tracked in #23. Re-running an old deploy run ships nothing: that commit is no longer `main`'s HEAD.
+build is tracked in #23. Re-running an old deploy run ships `main`'s HEAD (if green), never that run's older commit.
 
 **Rollback:** revert the commit on `main`, which redeploys. Previous object versions also stay in the bucket for 30 days.
 

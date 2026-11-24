@@ -3,7 +3,8 @@ name: Deploy site
 # live is what CI's unit, e2e, axe and Lighthouse jobs checked. scripts/resolve-deploy.ts decides what to ship:
 #   - after CI completes on a push to main (workflow_run): that run, if it succeeded;
 #   - workflow_dispatch: the green CI run of main's current HEAD (re-run CI first if its artifact has expired, 7 days);
-#   - only if that commit is still main's HEAD, so a late or re-run older deploy can never roll the site back.
+#   - always main's CURRENT HEAD: a run for an older commit (CI finished out of order, a re-run) ships HEAD's green build
+#     instead, or skips if there is none yet. Never a rollback; a cancelled pending run loses nothing.
 # Infrastructure is NOT deployed from this repo: it's managed with AWS CLI scripts + a RUNBOOK in the studio ops repo
 # (ADR 0011). No CDK. Enabled by repo variables AWS_DEPLOY_ROLE_ARN, SITE_BUCKET, DISTRIBUTION_ID, SITE_URL.
 # After the upload, `smoke` runs e2e/live.spec.ts against SITE_URL: it first waits until /version.txt serves this commit,
