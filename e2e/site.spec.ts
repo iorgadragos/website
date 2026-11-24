@@ -108,7 +108,7 @@ test('main navigation: every link is visible, navigates, and is marked current',
     await expect(page).toHaveURL(new URL(href, baseURL).href);
     await expect(page.locator('h1')).toBeVisible();
     const current = page.getByRole('navigation', { name: 'Main' }).locator(`a[href="${href}"][aria-current="page"]`);
-    if (href !== '/book/') await expect(current, `${href} marked aria-current`).toHaveCount(1);
+    await expect(current, `${href} marked aria-current`).toHaveCount(1);
   }
 });
 

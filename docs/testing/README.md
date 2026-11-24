@@ -24,3 +24,9 @@ Notes:
   `lighthouse-reports/<preset>/` (uploaded as CI artifacts).
 - Not covered yet: blog post pages (the only post is a draft, so none is built) and the deployed build being exactly
   the CI-tested one (#16, #17); the smoke test proving the new version is live (#18).
+- **Pinned overrides, to revisit** (Dependabot doesn't move them): `package.json` pins `axe-core` 4.14.0 (remove once
+  `@axe-core/playwright`'s own axe-core is at least 2 weeks old) and `playwright-core` 1.65.0 (must equal
+  `@playwright/test`'s version; Dependabot's single `all` group bumps both together). `tools/lighthouse` pins `basic-ftp`
+  6.2.6 (remove once lhci's chain resolves a patched version by itself). Its lockfile was resolved with
+  `npm install --before=<date two weeks ago>` so every transitive package is at least 2 weeks old; do the same on
+  manual updates.
