@@ -62,7 +62,7 @@ describe('check-edge gate', () => {
   });
   it.each([
     ['renamed', ok.replace('function handler(event)', 'function main(event)')],
-    ['nested, not top-level', `function outer() {\n  ${ok.replace('__DOMAIN__', '__DOMAIN__')}}\n`],
+    ['nested, not top-level', `function outer() {\n  ${ok}}\n`],
     ['a different parameter', ok.replace('function handler(event)', 'function handler(req)')],
   ])('fails without a top-level function handler(event): %s', (_, source) => {
     const r = run(source);
