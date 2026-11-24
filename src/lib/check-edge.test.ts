@@ -60,8 +60,12 @@ describe('check-edge gate', () => {
     expect(r.code).toBe(1);
     expect(r.err).toContain('node --check failed');
   });
-  it('fails without a top-level function handler(event)', () => {
-    const r = run(ok.replace('function handler(event)', 'function main(event)'));
+  it.each([
+    ['renamed', ok.replace('function handler(event)', 'function main(event)')],
+    ['nested, not top-level', `function outer() {\n  ${ok.replace('__DOMAIN__', '__DOMAIN__')}}\n`],
+    ['a different parameter', ok.replace('function handler(event)', 'function handler(req)')],
+  ])('fails without a top-level function handler(event): %s', (_, source) => {
+    const r = run(source);
     expect(r.code).toBe(1);
     expect(r.err).toContain('function handler(event)');
   });

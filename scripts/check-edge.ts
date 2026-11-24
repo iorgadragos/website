@@ -1,6 +1,7 @@
 // Checks the CloudFront Function source as it will be published (iorgadragos/website#14). It renders edge/rewrite.js
 // the way the ops repo's 03-website.sh does (__DOMAIN__ → the domain), then checks:
-//   - __DOMAIN__ appears in code (not only in a comment), and no other __PLACEHOLDER__ is left;
+//   - __DOMAIN__ appears outside `//` comment lines (as lib-website.sh's strip_comments sees it), and no other
+//     __PLACEHOLDER__ is left;
 //   - a top-level `function handler(event)`, the CloudFront entry point;
 //   - `node --check` parses it as a classic script (.cjs: ES module syntax such as `export` is rejected, as CloudFront would);
 //   - it fits CloudFront Functions' 10 KB (10240-byte) code limit, measured in UTF-8 bytes after rendering.
@@ -21,17 +22,17 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 // CHECK_EDGE_FN overrides the source for the script's own tests only; ignored in CI so the gate always checks edge/.
 const fnPath = (!process.env.CI && process.env.CHECK_EDGE_FN) || join(root, 'edge/rewrite.js');
 
-const fail = (errors: string[]) => {
+const fail = (errors: string[]): never => {
   console.error(errors.map((e) => `✗ ${e}`).join('\n'));
   process.exit(1);
 };
-let src: string;
-try {
-  src = readFileSync(fnPath, 'utf8');
-} catch (e) {
-  fail([`cannot read ${fnPath}: ${(e as Error).message}`]);
-}
-src = src!;
+const src = (() => {
+  try {
+    return readFileSync(fnPath, 'utf8');
+  } catch (e) {
+    return fail([`cannot read ${fnPath}: ${(e as Error).message}`]);
+  }
+})();
 const code = src.split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n'); // without `//` comment lines
 const rendered = src.replaceAll('__DOMAIN__', domain);
 const errors: string[] = [];
