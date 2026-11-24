@@ -15,6 +15,7 @@ npm ci
 npm run dev        # http://localhost:4321
 npm test           # unit tests (vitest)
 npm run build      # astro check + static build → dist/
+npm run check:edge # the CloudFront Function as published: renders, parses, has handler(), fits 10 KB
 npm run check:launch   # launch gate: placeholders filled, build servable
 npx playwright install chromium webkit   # once
 npm run test:e2e   # after build: Playwright on every page (desktop + mobile emulation) + axe
@@ -26,8 +27,9 @@ Blog posts live in `src/content/blog/*.md(x)`. Set `draft: false` to publish; fu
 ## Infrastructure
 The site runs on private S3 + CloudFront (OAC) with security headers and a strict CSP, in a dedicated AWS account. It deploys from `main` via GitHub Actions with OIDC (no long-lived keys); the deploy role can only sync this bucket and invalidate this distribution.
 
-The infrastructure itself is managed **with the AWS CLI and a documented runbook** in the studio's private ops repo. No CDK, Terraform or CloudFormation: every CloudFormation stack was retired on 2026-11-24, and the site's resources
-are converged by the ops repo's `03-website.sh` script from its merged `main`.
+The infrastructure itself is managed **with the AWS CLI and a documented runbook** in the studio's private ops repo.
+No CDK, Terraform or CloudFormation: the last of the studio's CloudFormation stacks was retired on 2026-11-24, and the
+site's resources are converged by the ops repo's `03-website.sh` script from its merged `main`.
 
 `edge/` holds what runs at the edge, as reviewed and tested data that the infra scripts apply:
 - `edge/rewrite.js`: the CloudFront Function (pretty URLs, www → apex 301 keeping the query string), unit-tested in
