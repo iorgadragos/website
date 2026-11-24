@@ -6,7 +6,7 @@
 | Build checks | `npm run build && npm run check:dist` | CI `site` | `astro check`, the built output's own checks |
 | End-to-end | `npm run build && npm run test:e2e` (Playwright) | CI `e2e` | every page (sitemap + built blog posts; the 9 core pages must exist) in desktop Chromium, desktop WebKit, Pixel 7 and iPhone 14 emulation, **served with the production security headers incl. the CSP**: 200, one h1, a title, no console or CSP errors, no failed or 4xx/5xx requests, no horizontal scroll; the main nav (visible, navigates, `aria-current`); skip link. Once (desktop Chromium): every same-origin link and resource resolves; the preview server's 404; robots, sitemap and RSS |
 | Accessibility | part of `test:e2e` (axe-core) | CI `e2e` | no **serious or critical** WCAG 2.2 A/AA violations on any page, in **light and dark** mode |
-| Performance, SEO | `npm run build && npm run lighthouse` (Lighthouse CI) | CI `lighthouse` (mobile and desktop in parallel) | performance, accessibility, best practices and SEO ≥ 0.95 on all 9 core pages, the **median** of 3 runs, mobile and desktop presets |
+| Performance, SEO | `npm run build && npm run lighthouse` (Lighthouse CI) | CI `lighthouse-mobile`, `lighthouse-desktop` (parallel) | performance, accessibility, best practices and SEO ≥ 0.95 on all 9 core pages, the **median** of 3 runs, mobile and desktop presets |
 | Live smoke | `LIVE_URL=https://… npm run test:live -- --project=desktop-chromium` | deploy `smoke` | on the real edge: every page loads in a browser under the live CSP with no errors, every security header at its `edge/security-headers.json` value (also on the 404), the pretty-URL rewrite returns the page, CloudFront's 403/404 → `/404.html` with status 404, cache headers |
 | Exploratory | `exploratory-checklist.md` | before launch and major UI changes | what automation can't judge (copy, layout, flows), done with Claude in Chrome |
 
@@ -30,3 +30,7 @@ Notes:
   6.2.6 (remove once lhci's chain resolves a patched version by itself). Its lockfile was resolved with
   `npm install --before=<date two weeks ago>` so every transitive package is at least 2 weeks old; do the same on
   manual updates.
+- The CI checks `site`, `e2e`, `lighthouse-mobile` and `lighthouse-desktop` (from GitHub Actions) are **required** to merge,
+  set by `scripts/github-rulesets.sh` in iorgadragos/studio (applied 2026-11-24). Changing a check name (a job id, its
+  `name:`, or a matrix value) needs a matching update to that script, applied right after the website PR merges; until
+  then the old required check never reports and blocks merges (bypass, with Dragos's OK: the `required-checks` ruleset).
