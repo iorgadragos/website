@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { sitePages, securityHeaders } from './pages';
+import { NAV } from '../src/consts';
 
 const PAGES = sitePages();
 const HEADERS = securityHeaders();
@@ -100,6 +101,8 @@ test('main navigation: every link is visible, navigates, and is marked current',
   const hrefs = await page.getByRole('navigation', { name: 'Main' }).locator('a').evaluateAll((as) =>
     as.map((a) => (a as HTMLAnchorElement).getAttribute('href')!));
   expect(hrefs.length).toBeGreaterThan(3);
+  // Every NAV entry is rendered as a plain nav link (the CTA button, class btn, is extra).
+  await expect(page.getByRole('navigation', { name: 'Main' }).locator('a:not(.btn)')).toHaveCount(NAV.length);
   for (const href of hrefs) {
     await page.goto('/');
     const link = page.getByRole('navigation', { name: 'Main' }).locator(`a[href="${href}"]`).first();
@@ -107,9 +110,14 @@ test('main navigation: every link is visible, navigates, and is marked current',
     await link.click();
     await expect(page).toHaveURL(new URL(href, baseURL).href);
     await expect(page.locator('h1')).toBeVisible();
-    // Nav entries (not the "Book a call" CTA button, class btn) mark the current page.
-    const entry = page.getByRole('navigation', { name: 'Main' }).locator(`a:not(.btn)[href="${href}"]`);
-    if (await entry.count()) await expect(entry, `${href} marked aria-current`).toHaveAttribute('aria-current', 'page');
+    // Exactly one nav link is current: the matching entry for a NAV target, none for the CTA-only /book/.
+    const current = page.getByRole('navigation', { name: 'Main' }).locator('[aria-current="page"]');
+    if (NAV.some((n) => n.href === href)) {
+      await expect(current).toHaveCount(1);
+      await expect(current).toHaveAttribute('href', href);
+    } else {
+      await expect(current).toHaveCount(0);
+    }
   }
 });
 
